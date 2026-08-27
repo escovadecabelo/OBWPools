@@ -11,6 +11,7 @@ interface DashboardProps {
   latestVisit?: ServiceVisit;
   onNavigate: (tab: string) => void;
   onQuickDoorHanger: () => void;
+  onViewHistory?: () => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -18,7 +19,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   latestTest,
   latestVisit,
   onNavigate,
-  onQuickDoorHanger
+  onQuickDoorHanger,
+  onViewHistory
 }) => {
   const test = latestTest || {
     timestamp: new Date().toISOString(),
@@ -304,9 +306,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </p>
               </div>
             </div>
-            <button className="btn-secondary" onClick={onQuickDoorHanger}>
-              <Send size={15} color="#00f2fe" /> Compartilhar Relatório / Imprimir
-            </button>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {onViewHistory && (
+                <button className="btn-secondary" onClick={onViewHistory}>
+                  <FileText size={15} color="#00f2fe" /> Ver Histórico da Piscina
+                </button>
+              )}
+              <button className="btn-primary" onClick={onQuickDoorHanger}>
+                <Send size={15} /> Enviar Comprovante Digital
+              </button>
+            </div>
           </div>
 
           <div style={{ background: 'rgba(5, 11, 20, 0.6)', padding: 16, borderRadius: 12, border: '1px solid rgba(255, 255, 255, 0.05)' }}>

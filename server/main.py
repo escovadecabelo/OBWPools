@@ -24,6 +24,7 @@ from server.db import (
     get_pool_tests, get_pool_visits, get_routes, get_route_by_id,
     optimize_route_path, update_stop_photos_and_status,
     get_all_technicians, get_technician_by_id, save_technician,
+    update_technician_in_db, delete_technician_from_db,
     create_or_update_route, add_stop_to_route, remove_stop_from_route, reassign_stop_to_route
 )
 from server.hermes_pool_tools import (
@@ -74,8 +75,24 @@ def list_technicians():
 
 @app.post("/api/technicians")
 def create_technician(payload: Dict[str, Any]):
-    """Cadastra ou atualiza um técnico."""
+    """Cadastra um novo técnico/funcionário."""
     return save_technician(payload)
+
+@app.put("/api/technicians/{tech_id}")
+def update_technician(tech_id: str, payload: Dict[str, Any]):
+    """Atualiza dados do técnico/funcionário."""
+    tech = update_technician_in_db(tech_id, payload)
+    if not tech:
+        raise HTTPException(status_code=404, detail="Técnico não encontrado.")
+    return {"message": "Técnico atualizado com sucesso!", "technician": tech}
+
+@app.delete("/api/technicians/{tech_id}")
+def delete_technician(tech_id: str):
+    """Remove um técnico do sistema."""
+    success = delete_technician_from_db(tech_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Técnico não encontrado.")
+    return {"message": "Técnico removido com sucesso!"}
 
 # ==========================================
 # ROTAS DE ADMINISTRAÇÃO E OTIMIZAÇÃO (ROTAS)

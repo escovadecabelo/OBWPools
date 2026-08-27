@@ -459,48 +459,115 @@ def seed_routes_data(cursor):
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, s)
 
-    # Testes Químicos Iniciais
-    cursor.execute("""
-    INSERT OR REPLACE INTO water_tests (id, pool_id, timestamp, ph, free_chlorine, combined_chlorine, total_alkalinity, calcium_hardness, cyanuric_acid, salt_ppm, temperature_c, turbidity, lsi_score, lsi_status, technician_notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        "test-1", "pool-1", now, 7.8, 1.2, 0.4, 120.0, 240.0, 35.0, 3100.0, 27.0, "Levemente Turva", 0.35, "Incrustante / Saturada", "Filtro com pressão de 18.5 PSI no Stonebriar. Aplicado redutor de pH e cloração."
-    ))
+    # Testes Químicos e Histórico de Visitas Passadas (Multi-semanas)
+    from datetime import timedelta
+    dt_now = datetime.now()
+    dt_7d = dt_now - timedelta(days=7)
+    dt_14d = dt_now - timedelta(days=14)
+    dt_21d = dt_now - timedelta(days=21)
 
-    # Visita com Fotos
-    checklist_demo = json.dumps([
+    # Testes pool-1 (Stonebriar Creek)
+    tests_pool1 = [
+        ("test-1-today", "pool-1", dt_now.isoformat(), 7.8, 1.2, 0.4, 120.0, 240.0, 35.0, 3100.0, 27.0, "Levemente Turva", 0.35, "Incrustante / Saturada", "Filtro com pressão de 18.5 PSI. Aplicado redutor de pH e choque de dicloro."),
+        ("test-1-7d", "pool-1", dt_7d.isoformat(), 7.5, 3.5, 0.1, 90.0, 250.0, 35.0, 3200.0, 28.0, "Cristalina", 0.05, "Equilibrada (Ideal)", "Piscina em equilíbrio perfeito. Água 100% transparente."),
+        ("test-1-14d", "pool-1", dt_14d.isoformat(), 7.3, 2.8, 0.2, 85.0, 245.0, 30.0, 3050.0, 26.5, "Cristalina", -0.15, "Equilibrada (Ideal)", "Adicionado 1 saco de sal (40 lbs) para elevar SWG.")
+    ]
+    for t in tests_pool1:
+        cursor.execute("""
+        INSERT OR REPLACE INTO water_tests (id, pool_id, timestamp, ph, free_chlorine, combined_chlorine, total_alkalinity, calcium_hardness, cyanuric_acid, salt_ppm, temperature_c, turbidity, lsi_score, lsi_status, technician_notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, t)
+
+    # Visitas pool-1 (Stonebriar Creek)
+    checklist_full = json.dumps([
         {"id": "c1", "task_name": "Escovação completa de paredes, degraus e spa", "category": "Limpeza Física", "completed": True},
         {"id": "c2", "task_name": "Aspiração de fundo e recolhimento de detritos", "category": "Limpeza Física", "completed": True},
         {"id": "c3", "task_name": "Limpeza de linha d'água e azulejos decorativos", "category": "Limpeza Física", "completed": True},
         {"id": "c4", "task_name": "Limpeza dos cestos do skimmer e pré-filtro da bomba", "category": "Casa de Máquinas", "completed": True},
         {"id": "c5", "task_name": "Inspeção da célula geradora de sal (SWG) e manômetro", "category": "Casa de Máquinas", "completed": True},
         {"id": "c6", "task_name": "Registro fotográfico (Antes / Depois / Equipamento)", "category": "Evidência & Fotos", "completed": True},
-        {"id": "c7", "task_name": "Aplicação de balanceador de pH e choque químico", "category": "Química & Tratamento", "completed": True}
-    ])
-    chems_demo = json.dumps([
-        {"chemical_name": "Redutor de pH Líquido (Muriatic Acid)", "amount": 500, "unit": "ml", "reason": "Reduzir pH de 7.8 para 7.4"},
-        {"chemical_name": "Dicloro Granulado 56%", "amount": 350, "unit": "g", "reason": "Elevar Cloro Livre para 3.5 ppm"}
+        {"id": "c7", "task_name": "Aplicação de balanceador de pH e sanitização", "category": "Química & Tratamento", "completed": True}
     ])
 
+    visits_pool1 = [
+        (
+            "visit-1", "pool-1", dt_now.isoformat(), "Tyler Brooks (DFW Senior Pool Tech)",
+            18.5, 0, "test-1-today", checklist_full,
+            json.dumps([
+                {"chemical_name": "Redutor de pH (Muriatic Acid 31.45%)", "amount": 16, "unit": "fl oz", "reason": "Reduzir pH de 7.8 para 7.4"},
+                {"chemical_name": "Dicloro Granulado 56%", "amount": 12, "unit": "oz", "reason": "Elevar Cloro Livre para 3.5 ppm"}
+            ]),
+            photos_stop1,
+            "Pressão do filtro em 18.5 PSI (+6.5 PSI acima do baseline). Fotos de Antes/Depois registradas.",
+            "Hello Harrison Family! Realizamos a manutenção completa da piscina Stonebriar Creek hoje. Fotos de Antes e Depois anexadas. Água liberada para banho às 17h.",
+            "Concluído", 1, 1
+        ),
+        (
+            "visit-1-7d", "pool-1", dt_7d.isoformat(), "Tyler Brooks (DFW Senior Pool Tech)",
+            13.0, 1, "test-1-7d", checklist_full,
+            json.dumps([
+                {"chemical_name": "Cloro Líquido 12.5% (Sodium Hypo)", "amount": 32, "unit": "fl oz", "reason": "Manutenção preventiva semanal"},
+                {"chemical_name": "Clarificante Concentrado", "amount": 4, "unit": "fl oz", "reason": "Polimento de brilho da água"}
+            ]),
+            json.dumps([
+                {"id": "p-past-1", "photo_type": "after", "url": "https://images.unsplash.com/photo-1562778612-e1e0cda9915c?w=600&auto=format&fit=crop&q=80", "caption": "Água cristalina pós-retrolavagem", "timestamp": dt_7d.isoformat()}
+            ]),
+            "Realizada retrolavagem (Backwash) do filtro. Pressão voltou ao ideal de 13 PSI.",
+            "Manutenção de rotina realizada. Realizamos retrolavagem do filtro de areia e cloração de reforço.",
+            "Concluído", 1, 1
+        ),
+        (
+            "visit-1-14d", "pool-1", dt_14d.isoformat(), "Marcus Rodriguez (North DFW Tech)",
+            12.0, 0, "test-1-14d", checklist_full,
+            json.dumps([
+                {"chemical_name": "Sal Especial SWG Granulado", "amount": 1, "unit": "sacos 40 lbs", "reason": "Elevar sal para 3200 ppm no gerador"},
+                {"chemical_name": "Muriatic Acid 31.45%", "amount": 8, "unit": "fl oz", "reason": "Ajuste fino de pH"}
+            ]),
+            "[]",
+            "Adicionado 1 saco de sal para reposição pós-chuva.",
+            "Visita semanal concluída: sal adicionado e aspiração de folhas executada com sucesso.",
+            "Concluído", 1, 1
+        )
+    ]
+
+    for v in visits_pool1:
+        cursor.execute("""
+        INSERT OR REPLACE INTO service_visits (id, pool_id, visit_date, technician_name, filter_pressure_psi, backwash_performed, water_test_id, checklist_json, chemicals_json, photos_json, technician_notes, customer_summary, status, door_hanger_sent, whatsapp_dispatched)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, v)
+
+    # Visitas pool-5 (Willow Bend)
     cursor.execute("""
     INSERT OR REPLACE INTO service_visits (id, pool_id, visit_date, technician_name, filter_pressure_psi, backwash_performed, water_test_id, checklist_json, chemicals_json, photos_json, technician_notes, customer_summary, status, door_hanger_sent, whatsapp_dispatched)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-        "visit-1",
-        "pool-1",
-        now,
-        "Tyler Brooks (DFW Senior Pool Tech)",
-        18.5,
-        0,
-        "test-1",
-        checklist_demo,
-        chems_demo,
-        photos_stop1,
-        "Pressão do filtro em 18.5 PSI (+6.5 PSI acima do baseline). Fotos de Antes/Depois registradas.",
-        "Hello Harrison Family! Realizamos a manutenção completa da piscina Stonebriar Creek hoje. Fotos de Antes e Depois anexadas. A água estará liberada para banho às 17h.",
-        "Concluído",
-        1,
-        1
+        "visit-5-7d", "pool-5", dt_7d.isoformat(), "Tyler Brooks (DFW Senior Pool Tech)",
+        11.0, 0, None, checklist_full,
+        json.dumps([
+            {"chemical_name": "Bicarbonato de Sódio (Alkalinity Up)", "amount": 2, "unit": "lbs", "reason": "Aumentar TA de 70 para 90 ppm"},
+            {"chemical_name": "Algicida Poly 60", "amount": 6, "unit": "fl oz", "reason": "Prevenção pós-calor intenso"}
+        ]),
+        "[]",
+        "Cascata e spa limpos. Filtro de cartucho em perfeito estado (11 PSI).",
+        "Hello Chen Family! Limpeza completa e dosagem preventiva de algicida realizadas hoje.",
+        "Concluído", 1, 1
+    ))
+
+    # Visitas pool-2 (Highland Park)
+    cursor.execute("""
+    INSERT OR REPLACE INTO service_visits (id, pool_id, visit_date, technician_name, filter_pressure_psi, backwash_performed, water_test_id, checklist_json, chemicals_json, photos_json, technician_notes, customer_summary, status, door_hanger_sent, whatsapp_dispatched)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        "visit-2-7d", "pool-2", dt_7d.isoformat(), "Jake Wilson (Dallas Tech)",
+        15.0, 1, None, checklist_full,
+        json.dumps([
+            {"chemical_name": "Hipoclorito de Cálcio 65% (Cal-Hypo)", "amount": 3, "unit": "lbs", "reason": "Supercloração de choque (Lap Pool)"},
+            {"chemical_name": "Muriatic Acid 31.45%", "amount": 32, "unit": "fl oz", "reason": "Reduzir pH pós-choque"}
+        ]),
+        "[]",
+        "Piscina semiolímpica com alta demanda de nado. Realizado choque com 3 lbs Cal-Hypo.",
+        "Relatório Highland Park HOA: Manutenção da piscina principal e lap pool finalizada com sucesso.",
+        "Concluído", 1, 1
     ))
 
 # Helper Functions
@@ -791,6 +858,22 @@ def save_technician(tech_data: Dict[str, Any]) -> Dict[str, Any]:
     conn.close()
     tech_data["id"] = tech_id
     return tech_data
+
+def update_technician_in_db(tech_id: str, tech_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    existing = get_technician_by_id(tech_id)
+    if not existing:
+        return None
+    merged = {**existing, **tech_data, "id": tech_id}
+    return save_technician(merged)
+
+def delete_technician_from_db(tech_id: str) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM technicians WHERE id = ?", (tech_id,))
+    deleted = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return deleted
 
 def create_or_update_route(route_data: Dict[str, Any]) -> Dict[str, Any]:
     conn = get_connection()

@@ -3,13 +3,15 @@ import type { Route, RouteStop, ServicePhoto, Technician, Pool } from '../types/
 import { 
   fetchRoutes, optimizeRouteApi, updateStopPhotosAndStatus, 
   fetchTechnicians, updateRouteApi, createRouteApi, addStopToRouteApi, 
-  removeStopFromRouteApi, reassignStopApi, fetchPools 
+  removeStopFromRouteApi, reassignStopApi, fetchPools,
+  saveTechnicianApi, updateTechnicianApi, deleteTechnicianApi
 } from '../lib/api';
 import { PhotoProofManager } from './PhotoProofManager';
 import { EditRouteModal } from './EditRouteModal';
+import { EditTechnicianModal } from './EditTechnicianModal';
 import { 
   Navigation, MapPin, Sparkles, 
-  Camera, RefreshCw, User, Edit3, Plus, Clock
+  Camera, RefreshCw, User, Edit3, Plus, Clock, UserCheck
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -24,6 +26,8 @@ export const RouteManager: React.FC<RouteManagerProps> = ({ onSelectPoolForLab }
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
   const [activeStopForPhotos, setActiveStopForPhotos] = useState<RouteStop | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [isTechModalOpen, setIsTechModalOpen] = useState<boolean>(false);
+  const [techToEdit, setTechToEdit] = useState<Technician | null>(null);
   const [isOptimizing, setIsOptimizing] = useState<boolean>(false);
   const [optimizeMessage, setOptimizeMessage] = useState<string>('');
 
@@ -129,6 +133,36 @@ export const RouteManager: React.FC<RouteManagerProps> = ({ onSelectPoolForLab }
     }
   };
 
+  const handleSaveTechnician = async (tech: Technician) => {
+    if (techToEdit) {
+      await updateTechnicianApi(tech.id, tech);
+    } else {
+      await saveTechnicianApi(tech);
+    }
+    const updatedTechs = await fetchTechnicians();
+    setTechnicians(updatedTechs);
+    setIsTechModalOpen(false);
+  };
+
+  const handleDeleteTechnician = async (techId: string) => {
+    await deleteTechnicianApi(techId);
+    const updatedTechs = await fetchTechnicians();
+    setTechnicians(updatedTechs);
+    setIsTechModalOpen(false);
+  };
+
+  const handleEditActiveTech = () => {
+    if (!selectedRoute) return;
+    const tech = technicians.find(t => t.name === selectedRoute.technician_name || selectedRoute.technician_name.includes(t.name.split(' ')[0])) || {
+      id: `tech-${Date.now()}`,
+      name: selectedRoute.technician_name,
+      phone: selectedRoute.technician_phone || '(214) 555-0000',
+      role: 'Técnico de Rotas (DFW)'
+    };
+    setTechToEdit(tech);
+    setIsTechModalOpen(true);
+  };
+
   const handleCreateNewRoute = async () => {
     const tech = technicians[0] || { name: 'Novo Técnico', phone: '(214) 555-0000' };
     const newRoute: Partial<Route> = {
@@ -195,13 +229,26 @@ export const RouteManager: React.FC<RouteManagerProps> = ({ onSelectPoolForLab }
             </span>
           </div>
 
-          <button 
-            className="btn-secondary"
-            onClick={handleCreateNewRoute}
-            style={{ padding: '6px 14px', fontSize: '0.8rem', borderRadius: 8 }}
-          >
-            <Plus size={14} /> Nova Rota p/ Funcionário
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button 
+              className="btn-secondary"
+              onClick={() => {
+                setTechToEdit(null);
+                setIsTechModalOpen(true);
+              }}
+              style={{ padding: '6px 12px', fontSize: '0.8rem', borderRadius: 8 }}
+            >
+              <Plus size={14} /> Novo Funcionário
+            </button>
+
+            <button 
+              className="btn-secondary"
+              onClick={handleCreateNewRoute}
+              style={{ padding: '6px 12px', fontSize: '0.8rem', borderRadius: 8 }}
+            >
+              <Plus size={14} /> Nova Rota
+            </button>
+          </div>
         </div>
 
         {/* Technician Route Cards Grid */}
@@ -294,10 +341,18 @@ export const RouteManager: React.FC<RouteManagerProps> = ({ onSelectPoolForLab }
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button 
               className="btn-secondary"
-              onClick={() => setIsEditModalOpen(true)}
-              style={{ padding: '10px 16px', borderRadius: 10 }}
+              onClick={handleEditActiveTech}
+              style={{ padding: '10px 14px', borderRadius: 10 }}
             >
-              <Edit3 size={16} color="#00f2fe" /> Editar Rota do Funcionário
+              <UserCheck size={16} color="#00f2fe" /> Editar Perfil Técnico
+            </button>
+
+            <button 
+              className="btn-secondary"
+              onClick={() => setIsEditModalOpen(true)}
+              style={{ padding: '10px 14px', borderRadius: 10 }}
+            >
+              <Edit3 size={16} color="#00f2fe" /> Editar Rota
             </button>
 
             <button 
@@ -614,6 +669,15 @@ export const RouteManager: React.FC<RouteManagerProps> = ({ onSelectPoolForLab }
         onRemoveStop={handleRemoveStop}
         onReassignStop={handleReassignStop}
         onOptimizeRoute={handleOptimizeRoute}
+      />
+
+      {/* Edit Technician Modal Dialog */}
+      <EditTechnicianModal
+        technician={techToEdit}
+        isOpen={isTechModalOpen}
+        onClose={() => setIsTechModalOpen(false)}
+        onSave={handleSaveTechnician}
+        onDelete={handleDeleteTechnician}
       />
 
     </div>

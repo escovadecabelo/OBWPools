@@ -2,13 +2,14 @@ import React, { useState, useMemo } from 'react';
 import type { Pool } from '../types/pool';
 import { 
   Search, Plus, Edit3, MapPin, Phone, Key, X, User, ExternalLink, 
-  FlaskConical, ArrowRight
+  FlaskConical, ArrowRight, FileText
 } from 'lucide-react';
 
 interface CustomerManagerProps {
   pools: Pool[];
   onSelectPool: (pool: Pool) => void;
   onEditPool: (pool: Pool) => void;
+  onViewHistory?: (pool: Pool) => void;
   onNewPoolClick: () => void;
   onNavigateTab: (tabId: string) => void;
 }
@@ -17,6 +18,7 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({
   pools,
   onSelectPool,
   onEditPool,
+  onViewHistory,
   onNewPoolClick,
   onNavigateTab
 }) => {
@@ -270,27 +272,38 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({
               </div>
 
               {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: 8, marginTop: 'auto', paddingTop: 6 }}>
+              <div style={{ display: 'flex', gap: 6, marginTop: 'auto', paddingTop: 6, flexWrap: 'wrap' }}>
+                {onViewHistory && (
+                  <button
+                    className="btn-secondary"
+                    style={{ flex: 1, padding: '8px 8px', fontSize: '0.75rem', justifyContent: 'center' }}
+                    onClick={() => onViewHistory(pool)}
+                    title="Ver Histórico de Execuções e Visitas"
+                  >
+                    <FileText size={13} color="#00f2fe" /> Histórico
+                  </button>
+                )}
+
                 <button
                   className="btn-secondary"
-                  style={{ flex: 1, padding: '9px 10px', fontSize: '0.8rem', justifyContent: 'center' }}
+                  style={{ flex: 1, padding: '8px 8px', fontSize: '0.75rem', justifyContent: 'center' }}
                   onClick={() => {
                     onSelectPool(pool);
                     onNavigateTab('lab');
                   }}
                 >
-                  <FlaskConical size={14} color="#00f2fe" /> Testar Água
+                  <FlaskConical size={13} color="#00f2fe" /> Lab Químico
                 </button>
 
                 <button
                   className="btn-primary"
-                  style={{ flex: 1.2, padding: '9px 12px', fontSize: '0.8rem', justifyContent: 'center' }}
+                  style={{ flex: 1.1, padding: '8px 10px', fontSize: '0.75rem', justifyContent: 'center' }}
                   onClick={() => {
                     onSelectPool(pool);
                     onNavigateTab('dashboard');
                   }}
                 >
-                  Abrir Painel <ArrowRight size={14} />
+                  Painel <ArrowRight size={13} />
                 </button>
               </div>
             </div>

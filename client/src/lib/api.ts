@@ -40,6 +40,32 @@ export async function saveTechnicianApi(tech: Partial<Technician>): Promise<any>
   }
 }
 
+export async function updateTechnicianApi(techId: string, data: Partial<Technician>): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/technicians/${techId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('Backend API offline, simulando atualização de técnico', err);
+    return { message: 'Técnico atualizado localmente' };
+  }
+}
+
+export async function deleteTechnicianApi(techId: string): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/technicians/${techId}`, {
+      method: 'DELETE'
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('Backend API offline, simulando remoção de técnico', err);
+    return { message: 'Técnico removido localmente' };
+  }
+}
+
 export async function fetchRoutes(): Promise<Route[]> {
   try {
     const res = await fetch(`${API_BASE}/routes`);

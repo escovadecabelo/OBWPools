@@ -13,17 +13,20 @@ import { VolumeCalculator } from './components/VolumeCalculator';
 import { EquipmentManager } from './components/EquipmentManager';
 import { ServiceChecklist } from './components/ServiceChecklist';
 import { NewPoolModal } from './components/NewPoolModal';
+import { PoolHistoryModal } from './components/PoolHistoryModal';
 
 export function App() {
   const [pools, setPools] = useState<Pool[]>([]);
   const [selectedPool, setSelectedPool] = useState<Pool | null>(null);
   const [editingPool, setEditingPool] = useState<Pool | null>(null);
+  const [historyPool, setHistoryPool] = useState<Pool | null>(null);
   const [activeTab, setActiveTab] = useState<string>('routes'); // Rotas como tela principal
   const [latestTest, setLatestTest] = useState<WaterTest | undefined>(undefined);
   const [latestVisit, setLatestVisit] = useState<ServiceVisit | undefined>(undefined);
   const [dosageInitialParams, setDosageInitialParams] = useState<any>(undefined);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -157,6 +160,10 @@ export function App() {
             pools={pools}
             onSelectPool={setSelectedPool}
             onEditPool={handleOpenEditModal}
+            onViewHistory={(pool) => {
+              setHistoryPool(pool);
+              setIsHistoryModalOpen(true);
+            }}
             onNewPoolClick={() => setIsModalOpen(true)}
             onNavigateTab={setActiveTab}
           />
@@ -169,6 +176,10 @@ export function App() {
             latestVisit={latestVisit}
             onNavigate={setActiveTab}
             onQuickDoorHanger={() => setActiveTab('service')}
+            onViewHistory={() => {
+              setHistoryPool(selectedPool);
+              setIsHistoryModalOpen(true);
+            }}
           />
         )}
 
@@ -231,6 +242,21 @@ export function App() {
           setEditingPool(null);
         }}
         onSave={handleUpdatePool}
+      />
+
+      {/* Modal de Histórico Completo de Execuções por Piscina */}
+      <PoolHistoryModal
+        pool={historyPool || selectedPool}
+        isOpen={isHistoryModalOpen}
+        onClose={() => {
+          setIsHistoryModalOpen(false);
+          setHistoryPool(null);
+        }}
+        onNewVisitClick={(poolId) => {
+          const p = pools.find(i => i.id === poolId);
+          if (p) setSelectedPool(p);
+          setActiveTab('service');
+        }}
       />
     </div>
   );
