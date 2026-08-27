@@ -8,6 +8,7 @@
     "build": "npm --prefix client run build",
     "preview": "npm --prefix client run preview",
     "lint": "npm --prefix client run lint",
-    "server": "python -m uvicorn server.main:app --reload --port 8000"
+    "server": "python -m uvicorn server.main:app --reload --port 8000",
+    "pages:deploy": "npm run build && npx wrangler pages deploy client/dist --project-name obwpools"
   }
 }
