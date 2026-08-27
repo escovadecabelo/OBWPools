@@ -1,0 +1,18 @@
+{
+  "name": "WandPool - Gestão de Piscinas",
+  "short_name": "WandPool",
+  "description": "Administração de rotas, otimização de menor caminho e envio de fotos para manutenção de piscinas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050b14",
+  "theme_color": "#050b14",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23050b14'/><path d='M10 35 Q 30 15 50 35 T 90 35 M 10 55 Q 30 35 50 55 T 90 55 M 10 75 Q 30 55 50 75 T 90 75' stroke='%2300f2fe' stroke-width='8' fill='none' stroke-linecap='round'/></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
