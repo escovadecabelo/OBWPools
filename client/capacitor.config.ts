@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.wandpool.app',
-  appName: 'WandPool',
+  appId: 'com.obwpools.app',
+  appName: 'OBW Pools',
   webDir: 'dist',
   server: {
     androidScheme: 'https',

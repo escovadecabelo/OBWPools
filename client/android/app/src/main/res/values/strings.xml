@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">WandPool</string>
-    <string name="title_activity_main">WandPool</string>
-    <string name="package_name">com.wandpool.app</string>
-    <string name="custom_url_scheme">com.wandpool.app</string>
+    <string name="app_name">OBW Pools</string>
+    <string name="title_activity_main">OBW Pools</string>
+    <string name="package_name">com.obwpools.app</string>
+    <string name="custom_url_scheme">com.obwpools.app</string>
 </resources>
