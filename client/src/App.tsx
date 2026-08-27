@@ -15,6 +15,12 @@ import { EquipmentManager } from './components/EquipmentManager';
 import { ServiceChecklist } from './components/ServiceChecklist';
 import { NewPoolModal } from './components/NewPoolModal';
 import { PoolHistoryModal } from './components/PoolHistoryModal';
+import { WeatherAlertsBanner } from './components/WeatherAlertsBanner';
+import { TruckInventory } from './components/TruckInventory';
+import { WorkOrderManager } from './components/WorkOrderManager';
+import { BillingManager } from './components/BillingManager';
+import { TeamManager } from './components/TeamManager';
+import { deductChemicalsFromTruck } from './lib/inventory';
 
 export function App() {
   const [pools, setPools] = useState<Pool[]>([]);
@@ -94,6 +100,9 @@ export function App() {
 
   const handleVisitRecorded = (newVisit: ServiceVisit) => {
     setLatestVisit(newVisit);
+    if (newVisit.chemicals_added && newVisit.chemicals_added.length > 0) {
+      deductChemicalsFromTruck(newVisit.technician_name, newVisit.chemicals_added);
+    }
   };
 
   const handleGoToDosage = (params: { ph: number; fc: number; ta: number; ch: number; cya: number; salt: number }) => {
@@ -132,7 +141,7 @@ export function App() {
           borderTopColor: '#00f2fe',
           animation: 'spin 1s linear infinite'
         }} />
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Iniciando WandPool Route & Chemistry Engine...</h2>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Iniciando OBW Pools Route & Chemistry Engine...</h2>
       </div>
     );
   }
@@ -150,7 +159,11 @@ export function App() {
       />
 
       {/* Main Content View */}
-      <main style={{ maxWidth: 1400, width: '100%', margin: '0 auto', padding: '16px 16px 40px', flex: 1 }}>
+      <main style={{ maxWidth: 1400, width: '100%', margin: '0 auto', padding: '16px 16px 40px', flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        
+        {/* Texas / DFW Weather & Freeze Alerts Banner */}
+        <WeatherAlertsBanner onNavigateToTab={setActiveTab} />
+
         {activeTab === 'home' && (
           <WelcomeScreen
             pools={pools}
@@ -168,6 +181,24 @@ export function App() {
               setActiveTab('lab');
             }}
           />
+        )}
+
+        {activeTab === 'team' && (
+          <TeamManager
+            onNavigateToRoute={() => setActiveTab('routes')}
+          />
+        )}
+
+        {activeTab === 'inventory' && (
+          <TruckInventory />
+        )}
+
+        {activeTab === 'work_orders' && (
+          <WorkOrderManager />
+        )}
+
+        {activeTab === 'billing' && (
+          <BillingManager />
         )}
 
         {activeTab === 'clients' && (

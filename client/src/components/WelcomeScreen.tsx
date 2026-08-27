@@ -2,7 +2,8 @@ import React from 'react';
 import type { Pool, Route } from '../types/pool';
 import { 
   Navigation, Users, FlaskConical, ClipboardCheck, 
-  MapPin, ShieldCheck, ArrowRight, Droplets, Zap
+  MapPin, ShieldCheck, ArrowRight, Droplets, Zap,
+  Truck, Wrench, Receipt
 } from 'lucide-react';
 
 interface WelcomeScreenProps {
@@ -49,48 +50,35 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           pointerEvents: 'none'
         }} />
 
-        {/* Large Animated Logo */}
+        {/* Large OBW Pools Logo Image */}
         <div style={{
-          display: 'inline-flex',
+          display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          width: 100,
-          height: 100,
-          borderRadius: 28,
-          background: 'linear-gradient(135deg, #00f2fe 0%, #4facfe 50%, #0072ff 100%)',
-          boxShadow: '0 0 45px rgba(0, 242, 254, 0.5), 0 10px 25px rgba(0, 0, 0, 0.6)',
-          margin: '0 auto 20px',
-          position: 'relative'
+          margin: '0 auto 16px'
         }}>
-          {/* Neon Water Ripples SVG */}
-          <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#031224" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
-            <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
-            <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
-          </svg>
+          <img
+            src="/logo.png"
+            alt="OBW Pools - Cleaning • Maintenance • Repairs"
+            style={{
+              maxWidth: 'min(90%, 420px)',
+              height: 'auto',
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 0 35px rgba(0, 242, 254, 0.45)) drop-shadow(0 10px 20px rgba(0, 0, 0, 0.7))',
+              transition: 'transform 0.3s ease'
+            }}
+          />
         </div>
 
-        {/* Brand Name & Typography */}
-        <h1 style={{
-          fontSize: 'clamp(2rem, 5vw, 3.2rem)',
-          fontWeight: 900,
-          letterSpacing: '-0.02em',
-          background: 'linear-gradient(135deg, #ffffff 30%, #00f2fe 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          margin: '0 0 8px 0'
-        }}>
-          WandPool
-        </h1>
-
         <p style={{
-          fontSize: 'clamp(0.95rem, 2vw, 1.2rem)',
+          fontSize: 'clamp(0.95rem, 2vw, 1.15rem)',
           color: '#cbd5e1',
-          maxWidth: 680,
+          maxWidth: 720,
           margin: '0 auto 20px',
           lineHeight: 1.5
         }}>
-          Plataforma Inteligente de Gestão de Rotas, Técnicos em Campo & Química de Precisão no <strong style={{ color: '#00f2fe' }}>DFW Metroplex</strong>
+          Plataforma Operacional de Gestão de Rotas, Técnicos em Campo & Química de Precisão no <strong style={{ color: '#00f2fe' }}>DFW Metroplex (Texas)</strong>
         </p>
 
         {/* Region & Feature Tags */}
@@ -314,6 +302,102 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#f59e0b', fontSize: '0.85rem', fontWeight: 700 }}>
               <span>Realizar Visita</span>
+              <ArrowRight size={16} />
+            </div>
+          </div>
+
+          {/* Card 5: Estoque do Caminhão */}
+          <div 
+            className="glass-panel"
+            onClick={() => onNavigate('inventory')}
+            style={{
+              padding: 24,
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: 16,
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <div>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(0, 242, 254, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+                <Truck size={24} color="#00f2fe" />
+              </div>
+              <h3 style={{ fontSize: '1.2rem', color: '#ffffff', margin: '0 0 6px 0', fontWeight: 700 }}>
+                Estoque do Caminhão (*Truck Inventory*)
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
+                Rastreamento e baixa automática de galões de ácido, pastilhas e sacos de sal por veículo de cada técnico.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#00f2fe', fontSize: '0.85rem', fontWeight: 700 }}>
+              <span>Ver Estoque</span>
+              <ArrowRight size={16} />
+            </div>
+          </div>
+
+          {/* Card 6: Ordens de Serviço & Reparos */}
+          <div 
+            className="glass-panel"
+            onClick={() => onNavigate('work_orders')}
+            style={{
+              padding: 24,
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: 16,
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <div>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(245, 158, 11, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+                <Wrench size={24} color="#f59e0b" />
+              </div>
+              <h3 style={{ fontSize: '1.2rem', color: '#ffffff', margin: '0 0 6px 0', fontWeight: 700 }}>
+                Ordens de Serviço & Reparos
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
+                Abertura de O.S., cotação de peças, mão de obra em $ USD e envio de orçamentos diretamente para o WhatsApp do cliente.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#f59e0b', fontSize: '0.85rem', fontWeight: 700 }}>
+              <span>Gerenciar O.S.</span>
+              <ArrowRight size={16} />
+            </div>
+          </div>
+
+          {/* Card 7: Faturamento & Mensalidades */}
+          <div 
+            className="glass-panel"
+            onClick={() => onNavigate('billing')}
+            style={{
+              padding: 24,
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: 16,
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <div>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+                <Receipt size={24} color="#10b981" />
+              </div>
+              <h3 style={{ fontSize: '1.2rem', color: '#ffffff', margin: '0 0 6px 0', fontWeight: 700 }}>
+                Faturamento & Mensalidades
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
+                Emissão de faturas automáticas com mensalidade base + produtos químicos extras cobrados no mês.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#10b981', fontSize: '0.85rem', fontWeight: 700 }}>
+              <span>Ver Faturamento</span>
               <ArrowRight size={16} />
             </div>
           </div>

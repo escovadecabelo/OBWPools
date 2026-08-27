@@ -11,7 +11,7 @@ import { EditRouteModal } from './EditRouteModal';
 import { EditTechnicianModal } from './EditTechnicianModal';
 import { 
   Navigation, MapPin, Sparkles, 
-  Camera, RefreshCw, User, Edit3, Plus, Clock, UserCheck
+  Camera, RefreshCw, User, Users, Edit3, Plus, Clock, UserCheck, Trash2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -163,6 +163,8 @@ export const RouteManager: React.FC<RouteManagerProps> = ({ onSelectPoolForLab }
     setIsTechModalOpen(false);
   };
 
+  const [showTeamRoster, setShowTeamRoster] = useState<boolean>(false);
+
   const handleDeleteTechnician = async (techId: string) => {
     await deleteTechnicianApi(techId);
     const [updatedTechs, updatedRoutes] = await Promise.all([
@@ -173,15 +175,36 @@ export const RouteManager: React.FC<RouteManagerProps> = ({ onSelectPoolForLab }
     setRoutes(updatedRoutes);
     if (updatedRoutes.length > 0) {
       setSelectedRoute(updatedRoutes[0]);
+    } else if (updatedTechs.length > 0) {
+      const fallbackRoute: Route = {
+        id: `route-${Date.now()}`,
+        technician_name: updatedTechs[0].name,
+        technician_phone: updatedTechs[0].phone,
+        day_of_week: 'Segunda-feira',
+        date: new Date().toISOString().split('T')[0],
+        total_stops: 0,
+        completed_stops: 0,
+        total_distance_km: 0.0,
+        estimated_travel_time_min: 0,
+        status: 'Planejada',
+        stops: []
+      };
+      await createRouteApi(fallbackRoute);
+      setSelectedRoute(fallbackRoute);
+      setRoutes([fallbackRoute]);
     }
-    setOptimizeMessage('🗑️ Funcionário removido com sucesso!');
+    setOptimizeMessage('🗑️ Funcionário e rotas vinculadas excluídos com sucesso!');
     setTimeout(() => setOptimizeMessage(''), 4000);
     setIsTechModalOpen(false);
   };
 
   const handleEditActiveTech = () => {
     if (!selectedRoute) return;
-    const tech = technicians.find(t => t.name === selectedRoute.technician_name || selectedRoute.technician_name.includes(t.name.split(' ')[0])) || {
+    const tech = technicians.find(t => 
+      t.name === selectedRoute.technician_name || 
+      selectedRoute.technician_name.includes(t.name.split(' ')[0]) ||
+      t.name.includes(selectedRoute.technician_name.split(' ')[0])
+    ) || technicians[0] || {
       id: `tech-${Date.now()}`,
       name: selectedRoute.technician_name,
       phone: selectedRoute.technician_phone || '(214) 555-0000',
@@ -257,7 +280,22 @@ export const RouteManager: React.FC<RouteManagerProps> = ({ onSelectPoolForLab }
             </span>
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button 
+              className="btn-secondary"
+              onClick={() => setShowTeamRoster(!showTeamRoster)}
+              style={{
+                padding: '6px 12px',
+                fontSize: '0.8rem',
+                borderRadius: 8,
+                background: showTeamRoster ? 'rgba(0, 242, 254, 0.2)' : undefined,
+                borderColor: showTeamRoster ? '#00f2fe' : undefined,
+                color: showTeamRoster ? '#00f2fe' : undefined
+              }}
+            >
+              <Users size={14} /> {showTeamRoster ? 'Ocultar Equipe' : `Equipe (${technicians.length})`}
+            </button>
+
             <button 
               className="btn-secondary"
               onClick={() => {
@@ -278,6 +316,99 @@ export const RouteManager: React.FC<RouteManagerProps> = ({ onSelectPoolForLab }
             </button>
           </div>
         </div>
+
+        {/* Team Roster Grid (When Expanded) */}
+        {showTeamRoster && (
+          <div style={{
+            background: 'rgba(5, 11, 20, 0.8)',
+            border: '1px solid rgba(0, 242, 254, 0.25)',
+            borderRadius: 12,
+            padding: 14,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#00f2fe' }}>
+                Quadro Geral de Funcionários & Técnicos ({technicians.length})
+              </span>
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                Clique para editar dados ou excluir permanentemente
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 }}>
+              {technicians.map((tech) => (
+                <div
+                  key={tech.id}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: 10,
+                    padding: 12,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: 8
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <img
+                      src={tech.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                      alt={tech.name}
+                      style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '1px solid #00f2fe' }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {tech.name}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#00f2fe' }}>
+                        {tech.role}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                        📞 {tech.phone}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => {
+                        setTechToEdit(tech);
+                        setIsTechModalOpen(true);
+                      }}
+                      style={{ flex: 1, padding: '6px 8px', fontSize: '0.75rem', justifyContent: 'center' }}
+                    >
+                      <Edit3 size={12} color="#00f2fe" /> Editar
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Tem certeza que deseja excluir o funcionário ${tech.name} e desvincular suas rotas?`)) {
+                          handleDeleteTechnician(tech.id);
+                        }
+                      }}
+                      style={{
+                        background: 'rgba(244, 63, 94, 0.15)',
+                        border: '1px solid rgba(244, 63, 94, 0.3)',
+                        color: '#fb7185',
+                        borderRadius: 6,
+                        padding: '6px 10px',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
+                    >
+                      <Trash2 size={12} /> Excluir
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Technician Route Cards Grid */}
         <div style={{
@@ -622,6 +753,20 @@ export const RouteManager: React.FC<RouteManagerProps> = ({ onSelectPoolForLab }
                     <option value="Em Atendimento">Em Atendimento</option>
                     <option value="Concluído">Concluído</option>
                   </select>
+
+                  {/* GPS Navigation Button */}
+                  <button
+                    className="btn-secondary"
+                    onClick={() => {
+                      const url = `https://www.google.com/maps/dir/?api=1&destination=${stop.latitude},${stop.longitude}`;
+                      window.open(url, '_blank');
+                    }}
+                    style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                    title="Abrir GPS no Google Maps / Waze"
+                  >
+                    <Navigation size={14} color="#00f2fe" />
+                    <span>GPS</span>
+                  </button>
 
                   {/* Photo Proof Trigger Button */}
                   <button

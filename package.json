@@ -1,8 +1,8 @@
 {
-  "name": "wandpool-root",
+  "name": "obw-pools",
   "version": "1.0.0",
   "private": true,
-  "description": "WandPool - Intelligent Pool Maintenance Platform",
+  "description": "OBW Pools - Cleaning • Maintenance • Repairs",
   "scripts": {
     "dev": "npm --prefix client run dev",
     "build": "npm --prefix client run build",

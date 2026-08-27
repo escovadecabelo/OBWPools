@@ -53,24 +53,24 @@ export const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name.trim()) return;
+
     const updated: Technician = {
       id: technician ? technician.id : `tech-${Date.now()}`,
-      name,
-      phone,
-      email,
-      role,
+      name: name.trim(),
+      phone: phone.trim(),
+      email: email.trim(),
+      role: role.trim(),
       avatar_url: avatarUrl,
       assigned_routes_count: technician?.assigned_routes_count || 0,
       active_stops_count: technician?.active_stops_count || 0
     };
     onSave(updated);
-    onClose();
   };
 
   const handleDelete = () => {
     if (technician && onDelete) {
       onDelete(technician.id);
-      onClose();
     }
   };
 
@@ -90,14 +90,14 @@ export const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
       padding: 12
     }}>
       <div className="glass-panel" style={{
-        maxWidth: 540,
+        maxWidth: 520,
         width: '100%',
         maxHeight: '94vh',
         display: 'flex',
         flexDirection: 'column',
         padding: 0,
         overflow: 'hidden',
-        border: '1px solid rgba(0, 242, 254, 0.3)',
+        border: '1px solid rgba(0, 242, 254, 0.35)',
         boxShadow: '0 25px 60px rgba(0,0,0,0.9), 0 0 35px rgba(0, 242, 254, 0.25)',
         borderRadius: 16
       }}>
@@ -112,8 +112,8 @@ export const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
-              width: 38,
-              height: 38,
+              width: 40,
+              height: 40,
               borderRadius: 10,
               background: 'rgba(0, 242, 254, 0.15)',
               display: 'flex',
@@ -123,11 +123,11 @@ export const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
               <User size={20} color="#00f2fe" />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.25rem', color: '#ffffff', margin: 0 }}>
-                {technician ? 'Editar Funcionário' : 'Novo Funcionário / Técnico'}
+              <h2 style={{ fontSize: '1.25rem', color: '#ffffff', margin: 0, fontWeight: 800 }}>
+                {technician ? 'Editar Cadastro do Funcionário' : 'Novo Funcionário / Técnico'}
               </h2>
               <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>
-                Gerenciamento de equipe e rotas de campo
+                Dados cadastrais e informações de contato
               </p>
             </div>
           </div>
@@ -144,7 +144,7 @@ export const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
           
           {/* Avatar Selector */}
           <div>
-            <label style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block', marginBottom: 8 }}>
+            <label style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block', marginBottom: 8, fontWeight: 600 }}>
               Foto do Perfil / Avatar
             </label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -183,157 +183,171 @@ export const EditTechnicianModal: React.FC<EditTechnicianModalProps> = ({
             </div>
           </div>
 
-          {/* Nome */}
+          {/* Nome Completo */}
           <div>
-            <label style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block', marginBottom: 4 }}>
-              <User size={13} style={{ display: 'inline', marginRight: 4 }} /> Nome Completo *
+            <label style={{ fontSize: '0.8rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, fontWeight: 700 }}>
+              <User size={14} color="#00f2fe" /> Nome Completo do Funcionário *
             </label>
             <input
               type="text"
-              className="input-control"
+              required
               placeholder="Ex: Tyler Brooks"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              required
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                background: '#050b14',
+                border: '1px solid rgba(0, 242, 254, 0.3)',
+                borderRadius: 10,
+                color: '#ffffff',
+                fontSize: '0.95rem',
+                fontWeight: 600
+              }}
             />
           </div>
 
-          {/* Telefone & WhatsApp */}
+          {/* Telefone / WhatsApp */}
           <div>
-            <label style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block', marginBottom: 4 }}>
-              <Phone size={13} style={{ display: 'inline', marginRight: 4 }} /> Telefone / WhatsApp *
+            <label style={{ fontSize: '0.8rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, fontWeight: 700 }}>
+              <Phone size={14} color="#10b981" /> Telefone / WhatsApp *
             </label>
             <input
               type="text"
-              className="input-control"
-              placeholder="Ex: (214) 555-7890"
+              required
+              placeholder="(214) 555-0142"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              required
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                background: '#050b14',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: 10,
+                color: '#ffffff',
+                fontSize: '0.95rem'
+              }}
             />
           </div>
 
-          {/* E-mail */}
+          {/* E-mail Corporativo */}
           <div>
-            <label style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block', marginBottom: 4 }}>
-              <Mail size={13} style={{ display: 'inline', marginRight: 4 }} /> E-mail Profissional
+            <label style={{ fontSize: '0.8rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, fontWeight: 700 }}>
+              <Mail size={14} color="#4facfe" /> E-mail de Contato
             </label>
             <input
               type="email"
-              className="input-control"
-              placeholder="Ex: tyler@wandpool.com"
+              placeholder="funcionario@wandpool.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                background: '#050b14',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: 10,
+                color: '#ffffff',
+                fontSize: '0.95rem'
+              }}
             />
           </div>
 
-          {/* Cargo / Região */}
+          {/* Cargo / Especialidade */}
           <div>
-            <label style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block', marginBottom: 4 }}>
-              <Briefcase size={13} style={{ display: 'inline', marginRight: 4 }} /> Cargo & Região de Atuação em DFW
+            <label style={{ fontSize: '0.8rem', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, fontWeight: 700 }}>
+              <Briefcase size={14} color="#f59e0b" /> Cargo / Função no DFW
             </label>
-            <input
-              type="text"
-              className="input-control"
-              placeholder="Ex: Senior Tech (Frisco & Plano)"
+            <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              required
-            />
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                background: '#050b14',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: 10,
+                color: '#ffffff',
+                fontSize: '0.95rem',
+                fontWeight: 600
+              }}
+            >
+              <option value="Técnico de Rotas (DFW)">Técnico de Rotas (DFW)</option>
+              <option value="Técnico Sênior (Química & LSI)">Técnico Sênior (Química & LSI)</option>
+              <option value="Especialista em Reparos & O.S.">Especialista em Reparos & O.S.</option>
+              <option value="Supervisor de Campo / Lead Tech">Supervisor de Campo / Lead Tech</option>
+              <option value="Técnico Comercial HOA">Técnico Comercial HOA</option>
+            </select>
           </div>
 
-          {/* Delete Option if editing */}
-          {technician && onDelete && (
-            <div style={{
-              marginTop: 10,
-              padding: '12px 16px',
-              background: 'rgba(244, 63, 94, 0.08)',
-              border: '1px solid rgba(244, 63, 94, 0.2)',
-              borderRadius: 10,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
+          {/* Bottom Actions */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginTop: 10,
+            paddingTop: 16,
+            borderTop: '1px solid rgba(255,255,255,0.08)'
+          }}>
+            {technician && onDelete ? (
               <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fb7185' }}>
-                  Remover Funcionário
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                  Exclui o cadastro do técnico do sistema.
-                </div>
-              </div>
-
-              {!confirmDelete ? (
-                <button
-                  type="button"
-                  onClick={() => setConfirmDelete(true)}
-                  style={{
-                    background: 'rgba(244, 63, 94, 0.2)',
-                    border: '1px solid rgba(244, 63, 94, 0.4)',
-                    color: '#fb7185',
-                    padding: '6px 12px',
-                    borderRadius: 8,
-                    fontSize: '0.8rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Trash2 size={14} style={{ display: 'inline', marginRight: 4 }} /> Excluir
-                </button>
-              ) : (
-                <div style={{ display: 'flex', gap: 6 }}>
+                {!confirmDelete ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(true)}
+                    style={{
+                      background: 'rgba(244, 63, 94, 0.1)',
+                      border: '1px solid rgba(244, 63, 94, 0.3)',
+                      color: '#fb7185',
+                      padding: '8px 14px',
+                      borderRadius: 8,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6
+                    }}
+                  >
+                    <Trash2 size={14} /> Excluir
+                  </button>
+                ) : (
                   <button
                     type="button"
                     onClick={handleDelete}
                     style={{
-                      background: '#f43f5e',
+                      background: '#e11d48',
                       border: 'none',
                       color: '#ffffff',
-                      padding: '6px 12px',
+                      padding: '8px 14px',
                       borderRadius: 8,
-                      fontSize: '0.8rem',
+                      fontSize: '0.85rem',
                       fontWeight: 700,
                       cursor: 'pointer'
                     }}
                   >
-                    Confirmar
+                    Confirmar Exclusão?
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(false)}
-                    style={{
-                      background: 'rgba(255,255,255,0.1)',
-                      border: 'none',
-                      color: '#94a3b8',
-                      padding: '6px 10px',
-                      borderRadius: 8,
-                      fontSize: '0.8rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            ) : <div />}
 
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary"
-              style={{ padding: '10px 18px' }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="btn-primary"
-              style={{ padding: '10px 22px' }}
-            >
-              <Check size={16} /> Salvar Funcionário
-            </button>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-secondary"
+                style={{ padding: '10px 18px', borderRadius: 8 }}
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="submit"
+                className="btn-primary"
+                style={{ padding: '10px 20px', borderRadius: 8, gap: 6 }}
+              >
+                <Check size={16} /> Salvar Funcionário
+              </button>
+            </div>
           </div>
         </form>
       </div>

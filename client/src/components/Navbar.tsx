@@ -1,5 +1,8 @@
 import React from 'react';
-import { Home, Navigation, Users, Waves, FlaskConical, Calculator, Box, Gauge, ClipboardCheck, ChevronDown, Plus } from 'lucide-react';
+import { 
+  Home, Navigation, Users, Waves, FlaskConical, Calculator, 
+  Box, Gauge, ClipboardCheck, ChevronDown, Plus, Truck, Wrench, Receipt 
+} from 'lucide-react';
 import type { Pool } from '../types/pool';
 
 interface NavbarProps {
@@ -22,6 +25,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   const tabs = [
     { id: 'home', label: 'Início', icon: Home, isHighlight: true },
     { id: 'routes', label: 'Rotas do Dia', icon: Navigation, isPrimary: true },
+    { id: 'team', label: 'Funcionários', icon: Users },
+    { id: 'inventory', label: 'Estoque Caminhão', icon: Truck },
+    { id: 'work_orders', label: 'Ordens de Serviço', icon: Wrench },
+    { id: 'billing', label: 'Faturamento', icon: Receipt },
     { id: 'clients', label: 'Clientes & Edição', icon: Users },
     { id: 'dashboard', label: 'Painel Geral', icon: Waves },
     { id: 'lab', label: 'Laboratório & LSI', icon: FlaskConical },
@@ -55,29 +62,27 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => setActiveTab('home')}
           style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
         >
-          <div style={{
-            width: 38,
-            height: 38,
-            borderRadius: 10,
-            background: 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 0 16px rgba(0, 242, 254, 0.35)'
-          }}>
-            <Waves size={22} color="#031224" strokeWidth={2.5} />
-          </div>
+          <img
+            src="/logo.png"
+            alt="OBW Pools"
+            style={{
+              height: 38,
+              width: 'auto',
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 0 10px rgba(0, 242, 254, 0.4))'
+            }}
+          />
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.03em' }}>
-                Wand<span style={{ color: '#00f2fe' }}>Pool</span>
+              <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.02em' }}>
+                OBW <span style={{ color: '#00f2fe' }}>Pools</span>
               </span>
               <span className="badge badge-cyan" style={{ fontSize: '0.6rem', padding: '1px 6px' }}>
                 PRO
               </span>
             </div>
-            <p style={{ fontSize: '0.7rem', color: '#64748b', margin: 0 }}>
-              Rotas & Manutenção de Piscinas
+            <p style={{ fontSize: '0.68rem', color: '#94a3b8', margin: 0 }}>
+              Cleaning • Maintenance • Repairs
             </p>
           </div>
         </div>
