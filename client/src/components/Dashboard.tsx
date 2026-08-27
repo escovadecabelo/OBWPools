@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Pool, WaterTest, ServiceVisit } from '../types/pool';
 import { 
-  Gauge, MapPin, Phone, User, Calendar, Droplets, ShieldCheck, FileText, Send, Sparkles, ArrowRight
+  Gauge, MapPin, Phone, User, Calendar, Droplets, ShieldCheck, FileText, Send
 } from 'lucide-react';
 import { calculateLSIClient } from '../lib/chemistry';
 
@@ -331,44 +331,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
       )}
-
-      {/* Hermes Copilot Quick Callout */}
-      <div className="glass-panel" style={{
-        padding: 24,
-        background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.08) 0%, rgba(79, 172, 254, 0.04) 100%)',
-        border: '1px solid rgba(0, 242, 254, 0.25)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: 16
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{
-            width: 50,
-            height: 50,
-            borderRadius: 14,
-            background: 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 0 20px rgba(0, 242, 254, 0.3)'
-          }}>
-            <Sparkles size={26} color="#031224" />
-          </div>
-          <div>
-            <h3 style={{ fontSize: '1.15rem', color: '#ffffff', marginBottom: 2 }}>
-              Hermes Pool Copilot: Assistente Inteligente Pronto
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-              Dúvidas sobre rotas, água verde, dosagens de choque ou barulhos no motor? Pergunte ao Hermes.
-            </p>
-          </div>
-        </div>
-        <button className="btn-primary" onClick={() => onNavigate('hermes')}>
-          Abrir Hermes Chat <ArrowRight size={16} />
-        </button>
-      </div>
     </div>
   );
 };
