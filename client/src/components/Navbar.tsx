@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigation, Users, Waves, FlaskConical, Calculator, Box, Gauge, ClipboardCheck, ChevronDown, Plus } from 'lucide-react';
+import { Home, Navigation, Users, Waves, FlaskConical, Calculator, Box, Gauge, ClipboardCheck, ChevronDown, Plus } from 'lucide-react';
 import type { Pool } from '../types/pool';
 
 interface NavbarProps {
@@ -20,8 +20,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNewPoolClick
 }) => {
   const tabs = [
+    { id: 'home', label: 'Início', icon: Home, isHighlight: true },
     { id: 'routes', label: 'Rotas do Dia', icon: Navigation, isPrimary: true },
-    { id: 'clients', label: 'Clientes & Edição', icon: Users, isHighlight: true },
+    { id: 'clients', label: 'Clientes & Edição', icon: Users },
     { id: 'dashboard', label: 'Painel Geral', icon: Waves },
     { id: 'lab', label: 'Laboratório & LSI', icon: FlaskConical },
     { id: 'dosage', label: 'Dosagem Química', icon: Calculator },
@@ -51,7 +52,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       }}>
         {/* Brand Logo & Tagline */}
         <div 
-          onClick={() => setActiveTab('routes')}
+          onClick={() => setActiveTab('home')}
           style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
         >
           <div style={{

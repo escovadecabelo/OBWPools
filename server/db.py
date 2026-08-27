@@ -864,11 +864,31 @@ def update_technician_in_db(tech_id: str, tech_data: Dict[str, Any]) -> Optional
     if not existing:
         return None
     merged = {**existing, **tech_data, "id": tech_id}
-    return save_technician(merged)
+    saved = save_technician(merged)
+    
+    # Atualiza também nas rotas associadas ao técnico
+    conn = get_connection()
+    cursor = conn.cursor()
+    new_name = merged.get("name")
+    new_phone = merged.get("phone")
+    old_first_name = existing["name"].split()[0]
+    cursor.execute("""
+    UPDATE routes
+    SET technician_name = ?, technician_phone = ?
+    WHERE technician_id = ? OR technician_name LIKE ?
+    """, (new_name, new_phone, tech_id, f"%{old_first_name}%"))
+    conn.commit()
+    conn.close()
+    return saved
 
 def delete_technician_from_db(tech_id: str) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
+    existing = get_technician_by_id(tech_id)
+    if existing:
+        name = existing.get("name", "")
+        old_first_name = name.split()[0] if name else ""
+        cursor.execute("DELETE FROM routes WHERE technician_id = ? OR technician_name = ? OR technician_name LIKE ?", (tech_id, name, f"%{old_first_name}%"))
     cursor.execute("DELETE FROM technicians WHERE id = ?", (tech_id,))
     deleted = cursor.rowcount > 0
     conn.commit()

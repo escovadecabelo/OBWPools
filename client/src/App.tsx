@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import type { Pool, WaterTest, ServiceVisit } from './types/pool';
-import { fetchPools, fetchPoolTests, fetchPoolVisits, createPoolApi, updatePoolApi } from './lib/api';
+import type { Pool, WaterTest, ServiceVisit, Route } from './types/pool';
+import { fetchPools, fetchPoolTests, fetchPoolVisits, createPoolApi, updatePoolApi, fetchRoutes } from './lib/api';
 import { Navbar } from './components/Navbar';
 import { BottomNav } from './components/BottomNav';
+import { WelcomeScreen } from './components/WelcomeScreen';
 import { RouteManager } from './components/RouteManager';
 import { CustomerManager } from './components/CustomerManager';
 import { EditPoolModal } from './components/EditPoolModal';
@@ -17,10 +18,11 @@ import { PoolHistoryModal } from './components/PoolHistoryModal';
 
 export function App() {
   const [pools, setPools] = useState<Pool[]>([]);
+  const [routes, setRoutes] = useState<Route[]>([]);
   const [selectedPool, setSelectedPool] = useState<Pool | null>(null);
   const [editingPool, setEditingPool] = useState<Pool | null>(null);
   const [historyPool, setHistoryPool] = useState<Pool | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('routes'); // Rotas como tela principal
+  const [activeTab, setActiveTab] = useState<string>('home'); // Tela de Boas-Vindas com Logo Grande como padrão
   const [latestTest, setLatestTest] = useState<WaterTest | undefined>(undefined);
   const [latestVisit, setLatestVisit] = useState<ServiceVisit | undefined>(undefined);
   const [dosageInitialParams, setDosageInitialParams] = useState<any>(undefined);
@@ -32,10 +34,14 @@ export function App() {
   useEffect(() => {
     async function loadData() {
       setLoading(true);
-      const data = await fetchPools();
-      setPools(data);
-      if (data.length > 0) {
-        setSelectedPool(data[0]);
+      const [poolsData, routesData] = await Promise.all([
+        fetchPools(),
+        fetchRoutes()
+      ]);
+      setPools(poolsData);
+      setRoutes(routesData);
+      if (poolsData.length > 0) {
+        setSelectedPool(poolsData[0]);
       }
       setLoading(false);
     }
@@ -145,6 +151,15 @@ export function App() {
 
       {/* Main Content View */}
       <main style={{ maxWidth: 1400, width: '100%', margin: '0 auto', padding: '16px 16px 40px', flex: 1 }}>
+        {activeTab === 'home' && (
+          <WelcomeScreen
+            pools={pools}
+            routes={routes}
+            onNavigate={setActiveTab}
+            onSelectPool={setSelectedPool}
+          />
+        )}
+
         {activeTab === 'routes' && (
           <RouteManager
             onSelectPoolForLab={(poolId) => {

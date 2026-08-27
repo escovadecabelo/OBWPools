@@ -139,15 +139,43 @@ export const RouteManager: React.FC<RouteManagerProps> = ({ onSelectPoolForLab }
     } else {
       await saveTechnicianApi(tech);
     }
-    const updatedTechs = await fetchTechnicians();
+    const [updatedTechs, updatedRoutes] = await Promise.all([
+      fetchTechnicians(),
+      fetchRoutes()
+    ]);
     setTechnicians(updatedTechs);
+    setRoutes(updatedRoutes);
+
+    if (selectedRoute) {
+      const match = updatedRoutes.find(r => r.id === selectedRoute.id);
+      if (match) {
+        setSelectedRoute(match);
+      } else if (techToEdit && (selectedRoute.technician_name === techToEdit.name || selectedRoute.technician_name.includes(techToEdit.name.split(' ')[0]))) {
+        setSelectedRoute({
+          ...selectedRoute,
+          technician_name: tech.name,
+          technician_phone: tech.phone
+        });
+      }
+    }
+    setOptimizeMessage(`✅ Perfil de ${tech.name} salvo com sucesso!`);
+    setTimeout(() => setOptimizeMessage(''), 4000);
     setIsTechModalOpen(false);
   };
 
   const handleDeleteTechnician = async (techId: string) => {
     await deleteTechnicianApi(techId);
-    const updatedTechs = await fetchTechnicians();
+    const [updatedTechs, updatedRoutes] = await Promise.all([
+      fetchTechnicians(),
+      fetchRoutes()
+    ]);
     setTechnicians(updatedTechs);
+    setRoutes(updatedRoutes);
+    if (updatedRoutes.length > 0) {
+      setSelectedRoute(updatedRoutes[0]);
+    }
+    setOptimizeMessage('🗑️ Funcionário removido com sucesso!');
+    setTimeout(() => setOptimizeMessage(''), 4000);
     setIsTechModalOpen(false);
   };
 

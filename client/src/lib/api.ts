@@ -1,4 +1,4 @@
-import type { Pool, WaterTest, ServiceVisit, Route, ServicePhoto, Technician } from '../types/pool';
+import type { Pool, WaterTest, ServiceVisit, Route, RouteStop, ServicePhoto, Technician } from '../types/pool';
 import { Capacitor } from '@capacitor/core';
 
 // Determina a URL base da API: no Android emulador usa 10.0.2.2, na web usa localhost ou URL configurada
@@ -19,49 +19,127 @@ export async function fetchTechnicians(): Promise<Technician[]> {
   try {
     const res = await fetch(`${API_BASE}/technicians`);
     if (!res.ok) throw new Error('Falha ao carregar técnicos');
-    return await res.json();
+    const data = await res.json();
+    localStorage.setItem('wandpool_technicians', JSON.stringify(data));
+    return data;
   } catch (err) {
-    console.warn('Backend API offline, usando fallback de técnicos', err);
-    return getFallbackTechnicians();
+    console.warn('Backend API offline, recuperando técnicos do armazenamento local', err);
+    const cached = localStorage.getItem('wandpool_technicians');
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    const initial = getFallbackTechnicians();
+    localStorage.setItem('wandpool_technicians', JSON.stringify(initial));
+    return initial;
   }
 }
 
 export async function saveTechnicianApi(tech: Partial<Technician>): Promise<any> {
+  const current = await fetchTechnicians();
+  const techId = tech.id || `tech-${Date.now()}`;
+  const fullTech: Technician = {
+    id: techId,
+    name: tech.name || 'Novo Técnico',
+    phone: tech.phone || '(214) 555-0000',
+    email: tech.email || '',
+    role: tech.role || 'Técnico de Rotas (DFW)',
+    avatar_url: tech.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    assigned_routes_count: tech.assigned_routes_count || 0,
+    active_stops_count: tech.active_stops_count || 0
+  };
+  
+  const updated = [...current.filter(t => t.id !== techId), fullTech];
+  localStorage.setItem('wandpool_technicians', JSON.stringify(updated));
+
   try {
     const res = await fetch(`${API_BASE}/technicians`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tech)
+      body: JSON.stringify(fullTech)
     });
     return await res.json();
   } catch (err) {
-    console.warn('Backend API offline, simulando gravação de técnico', err);
-    return { message: 'Técnico gravado localmente' };
+    console.warn('Backend API offline, técnico gravado no cache local', err);
+    return { message: 'Técnico gravado localmente', technician: fullTech };
   }
 }
 
 export async function updateTechnicianApi(techId: string, data: Partial<Technician>): Promise<any> {
+  const current = await fetchTechnicians();
+  const index = current.findIndex(t => t.id === techId);
+  const oldTech = index >= 0 ? current[index] : null;
+  const merged: Technician = index >= 0 
+    ? { ...current[index], ...data, id: techId }
+    : { id: techId, name: data.name || '', phone: data.phone || '', role: data.role || 'Técnico de Rotas', ...data } as Technician;
+
+  const updatedTechs = index >= 0
+    ? current.map(t => t.id === techId ? merged : t)
+    : [...current, merged];
+
+  localStorage.setItem('wandpool_technicians', JSON.stringify(updatedTechs));
+
+  // Se o nome ou telefone mudou, atualiza também as rotas locais associadas
+  if (oldTech && (oldTech.name !== merged.name || oldTech.phone !== merged.phone)) {
+    try {
+      const routes = await fetchRoutes();
+      const updatedRoutes = routes.map(r => {
+        if (r.technician_name.includes(oldTech.name.split(' ')[0]) || r.technician_name === oldTech.name) {
+          return {
+            ...r,
+            technician_name: merged.name,
+            technician_phone: merged.phone
+          };
+        }
+        return r;
+      });
+      localStorage.setItem('wandpool_routes', JSON.stringify(updatedRoutes));
+    } catch (e) {
+      console.warn('Erro ao propagar alteração de técnico nas rotas', e);
+    }
+  }
+
   try {
     const res = await fetch(`${API_BASE}/technicians/${techId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(merged)
     });
     return await res.json();
   } catch (err) {
-    console.warn('Backend API offline, simulando atualização de técnico', err);
-    return { message: 'Técnico atualizado localmente' };
+    console.warn('Backend API offline, técnico atualizado no cache local', err);
+    return { message: 'Técnico atualizado localmente', technician: merged };
   }
 }
 
 export async function deleteTechnicianApi(techId: string): Promise<any> {
+  const currentTechs = await fetchTechnicians();
+  const techToDelete = currentTechs.find(t => t.id === techId);
+  const updatedTechs = currentTechs.filter(t => t.id !== techId);
+  localStorage.setItem('wandpool_technicians', JSON.stringify(updatedTechs));
+
+  // Remove também rotas vinculadas a este técnico
+  const currentRoutes = await fetchRoutes();
+  const updatedRoutes = currentRoutes.filter(r => {
+    if (techToDelete) {
+      if (r.technician_name === techToDelete.name) return false;
+      const firstName = techToDelete.name.split(' ')[0];
+      if (firstName && firstName.length > 2 && r.technician_name.startsWith(firstName)) return false;
+    }
+    return true;
+  });
+  localStorage.setItem('wandpool_routes', JSON.stringify(updatedRoutes));
+
   try {
     const res = await fetch(`${API_BASE}/technicians/${techId}`, {
       method: 'DELETE'
     });
     return await res.json();
   } catch (err) {
-    console.warn('Backend API offline, simulando remoção de técnico', err);
+    console.warn('Backend API offline, técnico e rotas removidos do cache local', err);
     return { message: 'Técnico removido localmente' };
   }
 }
@@ -70,28 +148,62 @@ export async function fetchRoutes(): Promise<Route[]> {
   try {
     const res = await fetch(`${API_BASE}/routes`);
     if (!res.ok) throw new Error('Falha ao carregar rotas');
-    return await res.json();
+    const data = await res.json();
+    localStorage.setItem('wandpool_routes', JSON.stringify(data));
+    return data;
   } catch (err) {
-    console.warn('Backend API offline, usando fallback local de rotas', err);
-    return getFallbackRoutes();
+    console.warn('Backend API offline, usando rotas do armazenamento local', err);
+    const cached = localStorage.getItem('wandpool_routes');
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    const initial = getFallbackRoutes();
+    localStorage.setItem('wandpool_routes', JSON.stringify(initial));
+    return initial;
   }
 }
 
 export async function createRouteApi(payload: Partial<Route>): Promise<any> {
+  const current = await fetchRoutes();
+  const routeId = payload.id || `route-${Date.now()}`;
+  const fullRoute: Route = {
+    id: routeId,
+    technician_name: payload.technician_name || 'Técnico',
+    technician_phone: payload.technician_phone || '(214) 555-0000',
+    day_of_week: payload.day_of_week || 'Segunda-feira',
+    date: payload.date || new Date().toISOString().split('T')[0],
+    total_stops: payload.total_stops || 0,
+    completed_stops: payload.completed_stops || 0,
+    total_distance_km: payload.total_distance_km || 0.0,
+    estimated_travel_time_min: payload.estimated_travel_time_min || 0,
+    status: payload.status || 'Planejada',
+    stops: payload.stops || []
+  };
+  const updatedRoutes = [...current.filter(r => r.id !== routeId), fullRoute];
+  localStorage.setItem('wandpool_routes', JSON.stringify(updatedRoutes));
+
   try {
     const res = await fetch(`${API_BASE}/routes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(fullRoute)
     });
     return await res.json();
   } catch (err) {
-    console.warn('Backend API offline, simulando criação de rota', err);
-    return { message: 'Rota criada localmente' };
+    console.warn('Backend API offline, rota gravada no cache local', err);
+    return { message: 'Rota criada localmente', route: fullRoute };
   }
 }
 
 export async function updateRouteApi(routeId: string, payload: Partial<Route>): Promise<any> {
+  const current = await fetchRoutes();
+  const updatedRoutes = current.map(r => r.id === routeId ? { ...r, ...payload } : r);
+  localStorage.setItem('wandpool_routes', JSON.stringify(updatedRoutes));
+
   try {
     const res = await fetch(`${API_BASE}/routes/${routeId}`, {
       method: 'PUT',
@@ -100,12 +212,48 @@ export async function updateRouteApi(routeId: string, payload: Partial<Route>): 
     });
     return await res.json();
   } catch (err) {
-    console.warn('Backend API offline, simulando atualização de rota', err);
-    return { message: 'Rota atualizada localmente' };
+    console.warn('Backend API offline, rota atualizada no cache local', err);
+    return { message: 'Rota atualizada localmente', route: payload };
   }
 }
 
 export async function addStopToRouteApi(routeId: string, poolId: string, scheduledTime: string = '10:00'): Promise<any> {
+  const pools = await fetchPools();
+  const pool = pools.find(p => p.id === poolId);
+  const currentRoutes = await fetchRoutes();
+  
+  if (pool) {
+    const newStop: RouteStop = {
+      stop_id: `stop-${poolId}-${Date.now()}`,
+      route_id: routeId,
+      pool_id: pool.id,
+      pool_name: pool.name,
+      customer_name: pool.customer_name,
+      customer_phone: pool.customer_phone,
+      address: pool.address,
+      latitude: pool.latitude || 32.7767,
+      longitude: pool.longitude || -96.7970,
+      order_index: 99,
+      scheduled_time: scheduledTime,
+      estimated_duration_min: 45,
+      status: 'Pendente',
+      photos: []
+    };
+    
+    const updatedRoutes = currentRoutes.map(r => {
+      if (r.id === routeId) {
+        const newStops = [...(r.stops || []), newStop];
+        return {
+          ...r,
+          total_stops: newStops.length,
+          stops: newStops
+        };
+      }
+      return r;
+    });
+    localStorage.setItem('wandpool_routes', JSON.stringify(updatedRoutes));
+  }
+
   try {
     const res = await fetch(`${API_BASE}/routes/${routeId}/stops`, {
       method: 'POST',
@@ -114,24 +262,58 @@ export async function addStopToRouteApi(routeId: string, poolId: string, schedul
     });
     return await res.json();
   } catch (err) {
-    console.warn('Backend API offline, simulando adição de parada', err);
+    console.warn('Backend API offline, parada adicionada no cache local', err);
     return { message: 'Parada adicionada localmente' };
   }
 }
 
 export async function removeStopFromRouteApi(stopId: string): Promise<any> {
+  const currentRoutes = await fetchRoutes();
+  const updatedRoutes = currentRoutes.map(r => {
+    const remaining = (r.stops || []).filter(s => s.stop_id !== stopId);
+    return {
+      ...r,
+      total_stops: remaining.length,
+      stops: remaining
+    };
+  });
+  localStorage.setItem('wandpool_routes', JSON.stringify(updatedRoutes));
+
   try {
     const res = await fetch(`${API_BASE}/routes/stops/${stopId}`, {
       method: 'DELETE'
     });
     return await res.json();
   } catch (err) {
-    console.warn('Backend API offline, simulando remoção de parada', err);
+    console.warn('Backend API offline, parada removida no cache local', err);
     return { message: 'Parada removida localmente' };
   }
 }
 
 export async function reassignStopApi(stopId: string, targetRouteId: string): Promise<any> {
+  const currentRoutes = await fetchRoutes();
+  let stopToMove: RouteStop | null = null;
+
+  for (const r of currentRoutes) {
+    const found = (r.stops || []).find(s => s.stop_id === stopId);
+    if (found) {
+      stopToMove = { ...found, route_id: targetRouteId };
+      break;
+    }
+  }
+
+  if (stopToMove) {
+    const updatedRoutes = currentRoutes.map(r => {
+      if (r.id === targetRouteId) {
+        const added = [...(r.stops || []), stopToMove!];
+        return { ...r, total_stops: added.length, stops: added };
+      }
+      const filtered = (r.stops || []).filter(s => s.stop_id !== stopId);
+      return { ...r, total_stops: filtered.length, stops: filtered };
+    });
+    localStorage.setItem('wandpool_routes', JSON.stringify(updatedRoutes));
+  }
+
   try {
     const res = await fetch(`${API_BASE}/routes/stops/${stopId}/reassign`, {
       method: 'POST',
@@ -140,7 +322,7 @@ export async function reassignStopApi(stopId: string, targetRouteId: string): Pr
     });
     return await res.json();
   } catch (err) {
-    console.warn('Backend API offline, simulando transferência de parada', err);
+    console.warn('Backend API offline, parada transferida no cache local', err);
     return { message: 'Parada transferida localmente' };
   }
 }
@@ -156,13 +338,34 @@ export async function optimizeRouteApi(routeId: string): Promise<Route> {
     return data.route;
   } catch (err) {
     console.warn('Backend API offline, simulando otimização local', err);
-    const routes = getFallbackRoutes();
+    const routes = await fetchRoutes();
     const route = routes.find(r => r.id === routeId) || routes[0];
     return route;
   }
 }
 
 export async function updateStopPhotosAndStatus(stopId: string, status: string, photos: ServicePhoto[]): Promise<any> {
+  const currentRoutes = await fetchRoutes();
+  const updatedRoutes = currentRoutes.map(r => {
+    const updatedStops = (r.stops || []).map(s => {
+      if (s.stop_id === stopId) {
+        return {
+          ...s,
+          status: status as any,
+          photos: photos || s.photos
+        };
+      }
+      return s;
+    });
+    const completedCount = updatedStops.filter(s => s.status === 'Concluído').length;
+    return {
+      ...r,
+      completed_stops: completedCount,
+      stops: updatedStops
+    };
+  });
+  localStorage.setItem('wandpool_routes', JSON.stringify(updatedRoutes));
+
   try {
     const res = await fetch(`${API_BASE}/routes/stops/${stopId}/update`, {
       method: 'POST',
@@ -171,7 +374,7 @@ export async function updateStopPhotosAndStatus(stopId: string, status: string, 
     });
     return await res.json();
   } catch (err) {
-    console.warn('Backend API offline, gravando status da parada localmente', err);
+    console.warn('Backend API offline, gravando status da parada no cache local', err);
     return { message: 'Status gravado localmente' };
   }
 }
@@ -201,28 +404,50 @@ export async function fetchPools(): Promise<Pool[]> {
   try {
     const res = await fetch(`${API_BASE}/pools`);
     if (!res.ok) throw new Error('Falha ao carregar piscinas');
-    return await res.json();
+    const data = await res.json();
+    localStorage.setItem('wandpool_pools', JSON.stringify(data));
+    return data;
   } catch (err) {
-    console.warn('Backend API offline, usando fallback local', err);
-    return getFallbackPools();
+    console.warn('Backend API offline, usando piscinas do armazenamento local', err);
+    const cached = localStorage.getItem('wandpool_pools');
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    const initial = getFallbackPools();
+    localStorage.setItem('wandpool_pools', JSON.stringify(initial));
+    return initial;
   }
 }
 
 export async function createPoolApi(pool: Pool): Promise<any> {
+  const current = await fetchPools();
+  const poolId = pool.id || `pool-${Date.now()}`;
+  const fullPool = { ...pool, id: poolId };
+  const updatedPools = [...current.filter(p => p.id !== poolId), fullPool];
+  localStorage.setItem('wandpool_pools', JSON.stringify(updatedPools));
+
   try {
     const res = await fetch(`${API_BASE}/pools`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(pool)
+      body: JSON.stringify(fullPool)
     });
     return await res.json();
   } catch (err) {
-    console.warn('Backend API offline, salvando piscina localmente', err);
-    return { message: 'Piscina salva localmente', pool };
+    console.warn('Backend API offline, piscina gravada no cache local', err);
+    return { message: 'Piscina salva localmente', pool: fullPool };
   }
 }
 
 export async function updatePoolApi(pool: Pool): Promise<any> {
+  const current = await fetchPools();
+  const updatedPools = current.map(p => p.id === pool.id ? pool : p);
+  localStorage.setItem('wandpool_pools', JSON.stringify(updatedPools));
+
   try {
     const res = await fetch(`${API_BASE}/pools/${pool.id}`, {
       method: 'PUT',
@@ -231,7 +456,7 @@ export async function updatePoolApi(pool: Pool): Promise<any> {
     });
     return await res.json();
   } catch (err) {
-    console.warn('Backend API offline, atualizando piscina localmente', err);
+    console.warn('Backend API offline, piscina atualizada no cache local', err);
     return { message: 'Piscina atualizada localmente', pool };
   }
 }
