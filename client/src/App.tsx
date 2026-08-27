@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Pool, WaterTest, ServiceVisit, Route } from './types/pool';
+import { isPortalPath } from './lib/leadGuard';
 import { fetchPools, fetchPoolTests, fetchPoolVisits, createPoolApi, updatePoolApi, fetchRoutes } from './lib/api';
 import { Navbar } from './components/Navbar';
 import { BottomNav } from './components/BottomNav';
@@ -24,7 +25,9 @@ import { deductChemicalsFromTruck } from './lib/inventory';
 import { LandingPage } from './components/LandingPage';
 
 export function App() {
-  const [viewMode, setViewMode] = useState<'landing' | 'app'>('landing');
+  const [viewMode, setViewMode] = useState<'landing' | 'app'>(() =>
+    isPortalPath(window.location.pathname) ? 'app' : 'landing'
+  );
   const [pools, setPools] = useState<Pool[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [selectedPool, setSelectedPool] = useState<Pool | null>(null);
@@ -112,6 +115,24 @@ export function App() {
     setActiveTab('dosage');
   };
 
+  const launchPortal = useCallback(() => {
+    window.history.pushState({}, '', '/portal');
+    setViewMode('app');
+  }, []);
+
+  const returnToSite = useCallback(() => {
+    window.history.pushState({}, '', '/');
+    setViewMode('landing');
+  }, []);
+
+  useEffect(() => {
+    const onPopState = () => {
+      setViewMode(isPortalPath(window.location.pathname) ? 'app' : 'landing');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
   const handleApplyVolume = (liters: number, gallons: number) => {
     if (!selectedPool) return;
     const updated = { ...selectedPool, volume_liters: liters, volume_gallons: gallons };
@@ -149,7 +170,7 @@ export function App() {
   }
 
   if (viewMode === 'landing') {
-    return <LandingPage onLaunchApp={() => setViewMode('app')} />;
+    return <LandingPage onLaunchApp={launchPortal} />;
   }
 
   return (
@@ -162,7 +183,7 @@ export function App() {
         selectedPool={selectedPool}
         onSelectPool={setSelectedPool}
         onNewPoolClick={() => setIsModalOpen(true)}
-        onBackToLanding={() => setViewMode('landing')}
+        onBackToLanding={returnToSite}
       />
 
       {/* Main Content View */}

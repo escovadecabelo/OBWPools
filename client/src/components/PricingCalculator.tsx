@@ -37,10 +37,7 @@ export const PricingCalculator: React.FC<PricingCalculatorProps> = ({ onOpenQuot
   const estimatedPrice = calculateEstimatedPrice();
 
   const handleWhatsAppBooking = (planName: string, price: number) => {
-    const text = encodeURIComponent(
-      `Hello OBW Pools! I'd like to schedule an inspection for the ${planName} plan (Estimated rate: $${price}/mo for a ${gallons.toLocaleString()} gallon ${sanitizer === 'salt' ? 'Saltwater' : 'Chlorine'} pool).`
-    );
-    window.open(`https://wa.me/17542351214?text=${text}`, '_blank');
+    onOpenQuoteModal(`${planName} (Estimated $${price}/mo)`);
   };
 
   return (

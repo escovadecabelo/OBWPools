@@ -7,6 +7,8 @@ import {
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { PricingCalculator } from './PricingCalculator';
 import { QuoteFormModal } from './QuoteFormModal';
+import { canSubmitLead } from '../lib/leadGuard';
+import { HoneypotField, TurnstileWidget } from './TurnstileWidget';
 
 interface LandingPageProps {
   onLaunchApp: () => void;
@@ -20,6 +22,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
   const [heroName, setHeroName] = useState('');
   const [heroPhone, setHeroPhone] = useState('');
   const [heroCity, setHeroCity] = useState('Frisco');
+  const [heroHoneypot, setHeroHoneypot] = useState('');
+  const [heroTurnstileToken, setHeroTurnstileToken] = useState<string | null>(null);
+  const [heroGuardError, setHeroGuardError] = useState('');
 
   const handleOpenQuote = (planName?: string) => {
     if (planName) setQuoteInitialPlan(planName);
@@ -29,6 +34,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
   const handleHeroSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!heroName || !heroPhone) return;
+    if (!canSubmitLead({ honeypot: heroHoneypot, turnstileToken: heroTurnstileToken })) {
+      setHeroGuardError('Please complete the security check before submitting.');
+      return;
+    }
+    setHeroGuardError('');
     const text = encodeURIComponent(
       `Hello OBW Pools! I'd like to request a free pool inspection.\n\n` +
       `👤 Name: ${heroName}\n` +
@@ -288,10 +298,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
                 <span>Call (754) 235-1214</span>
               </a>
 
-              <a
-                href="https://wa.me/17542351214?text=Hello%20OBW%20Pools!%20I%20would%20like%20to%20request%20a%20quote%20for%20my%20pool."
-                target="_blank"
-                rel="noreferrer"
+              <button
+                type="button"
+                onClick={() => handleOpenQuote()}
                 style={{
                   backgroundColor: '#25d366',
                   color: '#ffffff',
@@ -299,7 +308,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
                   borderRadius: 10,
                   fontSize: '0.95rem',
                   fontWeight: 700,
-                  textDecoration: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8
@@ -307,7 +317,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
               >
                 <MessageSquare size={18} />
                 <span>Chat on WhatsApp</span>
-              </a>
+              </button>
             </div>
           </div>
 
@@ -332,7 +342,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
               </p>
             </div>
 
-            <form onSubmit={handleHeroSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <form onSubmit={handleHeroSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'relative' }}>
+              <HoneypotField value={heroHoneypot} onChange={setHeroHoneypot} />
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
                   Your Name
@@ -405,6 +416,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
                   <option value="Other DFW Area">Other DFW Area</option>
                 </select>
               </div>
+
+              <TurnstileWidget onToken={setHeroTurnstileToken} />
+              {heroGuardError && (
+                <p style={{ fontSize: '0.8rem', color: '#b91c1c', margin: 0 }}>{heroGuardError}</p>
+              )}
 
               <button
                 type="submit"

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { X, Send, CheckCircle2, Phone, Mail, Sparkles, MessageSquare } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { canSubmitLead } from '../lib/leadGuard';
+import { HoneypotField, TurnstileWidget } from './TurnstileWidget';
 
 interface QuoteFormModalProps {
   isOpen: boolean;
@@ -21,12 +23,20 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
   const [selectedPlan, setSelectedPlan] = useState(initialPlan);
   const [notes, setNotes] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [honeypot, setHoneypot] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [guardError, setGuardError] = useState('');
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !phone) return;
+    if (!canSubmitLead({ honeypot, turnstileToken })) {
+      setGuardError('Please complete the security check before submitting.');
+      return;
+    }
+    setGuardError('');
 
     // Trigger confetti celebration
     try {
@@ -43,6 +53,11 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
   };
 
   const handleSendToWhatsApp = () => {
+    if (!canSubmitLead({ honeypot, turnstileToken })) {
+      setGuardError('Please complete the security check before opening WhatsApp.');
+      return;
+    }
+    setGuardError('');
     const text = encodeURIComponent(
       `Hello OBW Pools! I'd like to request a quote and schedule an inspection.\n\n` +
       `👤 *Name:* ${name}\n` +
@@ -128,7 +143,8 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
               Fill in your details and our technical coordinator will reach out promptly via phone or WhatsApp.
             </p>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'relative' }}>
+              <HoneypotField value={honeypot} onChange={setHoneypot} />
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
                   Full Name *
@@ -288,6 +304,11 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
                   }}
                 />
               </div>
+
+              <TurnstileWidget onToken={setTurnstileToken} />
+              {guardError && (
+                <p style={{ fontSize: '0.8rem', color: '#b91c1c', margin: 0 }}>{guardError}</p>
+              )}
 
               <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
                 <button
