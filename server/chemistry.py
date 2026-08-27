@@ -201,7 +201,7 @@ def calculate_chemical_dosages(
         
         recommendations.append({
             "parameter": "Cloro Livre (Desinfecção)",
-            "chemical": "Liquid Chlorine 12.5% (Hipoclorito de Sódio)",
+            "chemical": "Liquid Chlorine / Cloro Líquido 12.5% (Hipoclorito de Sódio)",
             "amount": liquid_cl_fl_oz,
             "unit": "fl oz",
             "amount_formatted": f"{liquid_cl_fl_oz} fl oz ({liquid_gal} gal)",

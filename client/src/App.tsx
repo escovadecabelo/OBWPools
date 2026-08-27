@@ -21,8 +21,10 @@ import { WorkOrderManager } from './components/WorkOrderManager';
 import { BillingManager } from './components/BillingManager';
 import { TeamManager } from './components/TeamManager';
 import { deductChemicalsFromTruck } from './lib/inventory';
+import { LandingPage } from './components/LandingPage';
 
 export function App() {
+  const [viewMode, setViewMode] = useState<'landing' | 'app'>('landing');
   const [pools, setPools] = useState<Pool[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [selectedPool, setSelectedPool] = useState<Pool | null>(null);
@@ -146,6 +148,10 @@ export function App() {
     );
   }
 
+  if (viewMode === 'landing') {
+    return <LandingPage onLaunchApp={() => setViewMode('app')} />;
+  }
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: '70px' }}>
       {/* Top Navbar */}
@@ -156,6 +162,7 @@ export function App() {
         selectedPool={selectedPool}
         onSelectPool={setSelectedPool}
         onNewPoolClick={() => setIsModalOpen(true)}
+        onBackToLanding={() => setViewMode('landing')}
       />
 
       {/* Main Content View */}

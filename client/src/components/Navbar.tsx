@@ -1,7 +1,6 @@
-import React from 'react';
 import { 
   Home, Navigation, Users, Waves, FlaskConical, Calculator, 
-  Box, Gauge, ClipboardCheck, ChevronDown, Plus, Truck, Wrench, Receipt 
+  Box, Gauge, ClipboardCheck, ChevronDown, Plus, Truck, Wrench, Receipt, Globe 
 } from 'lucide-react';
 import type { Pool } from '../types/pool';
 
@@ -12,6 +11,7 @@ interface NavbarProps {
   selectedPool: Pool | null;
   onSelectPool: (pool: Pool) => void;
   onNewPoolClick: () => void;
+  onBackToLanding?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -20,7 +20,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   pools,
   selectedPool,
   onSelectPool,
-  onNewPoolClick
+  onNewPoolClick,
+  onBackToLanding
 }) => {
   const tabs = [
     { id: 'home', label: 'Início', icon: Home, isHighlight: true },
@@ -148,6 +149,30 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Plus size={14} /> Novo
           </button>
+
+          {onBackToLanding && (
+            <button
+              onClick={onBackToLanding}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '7px 12px',
+                borderRadius: 8,
+                background: 'rgba(0, 242, 254, 0.12)',
+                border: '1px solid rgba(0, 242, 254, 0.35)',
+                color: '#00f2fe',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              title="Voltar ao Website Oficial"
+            >
+              <Globe size={14} />
+              <span>Voltar ao Site</span>
+            </button>
+          )}
         </div>
       </div>
 

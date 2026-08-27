@@ -1,6 +1,6 @@
-# WandPool - Intelligent Pool Maintenance Platform
+# OBW Pools - Intelligent Pool Maintenance & Field Service Platform
 
-Welcome to the **WandPool** project. WandPool combines precision pool chemistry calculations, equipment health monitoring, and maintenance routine automation with **Nous Research's Hermes Agent** and **obra's Superpowers** skill architecture.
+Welcome to the **OBW Pools** project. OBW Pools combines precision pool chemistry calculations, route optimization with GPS navigation, photo proofing, truck inventory management, work order quoting, equipment health monitoring, and maintenance routine automation with **Nous Research's Hermes Agent** and **obra's Superpowers** skill architecture.
 
 ---
 
@@ -34,7 +34,7 @@ WandPool is designed for both residential pool owners and commercial pool servic
 ## 🛠️ Directory Structure
 
 ```
-WandPool/
+OBWPools/
 ├── AGENTS.md                  # Project rules & chemistry guidelines
 ├── skills/                    # Domain skills & Superpowers playbooks
 │   ├── pool-chemistry-diagnosis/

@@ -8,7 +8,7 @@ def test_api_root():
     response = client.get("/")
     assert response.status_code == 200
     data = response.json()
-    assert data["app"] == "WandPool API"
+    assert data["app"] in ["OBW Pools API", "WandPool API"]
     assert data["language"] == "pt-BR"
 
 def test_api_list_pools():

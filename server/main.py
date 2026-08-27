@@ -58,9 +58,10 @@ init_db()
 @app.get("/")
 def read_root():
     return {
-        "app": "WandPool API",
+        "app": "OBW Pools API",
         "status": "online",
         "version": "1.0.0",
+        "language": "pt-BR",
         "primary_focus": "Administração de Rotas por Funcionário, Otimização GPS & Envio de Fotos"
     }
 
