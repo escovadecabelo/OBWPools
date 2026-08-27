@@ -155,41 +155,20 @@ def get_pool(pool_id: str):
 
 @app.post("/api/pools", status_code=status.HTTP_201_CREATED)
 def create_pool(pool: Pool):
-    conn = get_connection()
-    cursor = conn.cursor()
-    target_json = json.dumps(pool.target_params.dict())
-    
-    cursor.execute("""
-    INSERT INTO pools (id, name, customer_name, customer_phone, customer_email, address, latitude, longitude, gate_code, pool_type, surface_type, sanitizer_type, volume_liters, volume_gallons, clean_filter_psi, current_filter_psi, filter_type, pump_hp, daily_run_hours, service_day, service_frequency, target_params, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        pool.id or f"pool-{uuid.uuid4().hex[:8]}",
-        pool.name,
-        pool.customer_name,
-        pool.customer_phone,
-        pool.customer_email,
-        pool.address,
-        pool.latitude or -23.5012,
-        pool.longitude or -46.8521,
-        pool.gate_code,
-        pool.pool_type,
-        pool.surface_type,
-        pool.sanitizer_type,
-        pool.volume_liters,
-        pool.volume_gallons,
-        pool.clean_filter_psi,
-        pool.current_filter_psi,
-        pool.filter_type,
-        pool.pump_hp,
-        pool.daily_run_hours,
-        pool.service_day,
-        pool.service_frequency,
-        target_json,
-        datetime.now().isoformat()
-    ))
-    conn.commit()
-    conn.close()
-    return {"message": "Piscina cadastrada com sucesso!", "id": pool.id}
+    pool_data = pool.dict()
+    if not pool_data.get("id"):
+        pool_data["id"] = f"pool-{uuid.uuid4().hex[:8]}"
+    saved = save_pool_in_db(pool_data)
+    return {"message": "Piscina cadastrada com sucesso!", "pool": saved}
+
+@app.put("/api/pools/{pool_id}")
+def update_pool(pool_id: str, pool: Pool):
+    pool_data = pool.dict()
+    updated = update_pool_in_db(pool_id, pool_data)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Piscina não encontrada.")
+    return {"message": "Piscina/Cliente atualizado com sucesso!", "pool": updated}
+
 
 # ==========================================
 # ROTAS DE TESTES QUÍMICOS E VISITAS

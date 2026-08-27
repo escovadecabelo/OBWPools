@@ -253,6 +253,51 @@ input[type=range]::-webkit-slider-thumb:hover {
   animation: pulse-glow 3s infinite ease-in-out;
 }
 
+/* Mobile Android Bottom Navigation Bar */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: rgba(4, 9, 18, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(0, 242, 254, 0.2);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.6);
+  z-index: 90;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (max-width: 859px) {
+  .desktop-tab-bar {
+    display: none !important;
+  }
+  .mobile-bottom-nav {
+    display: block !important;
+  }
+  main {
+    padding: 12px 12px 75px !important;
+  }
+  .glass-panel {
+    padding: 16px !important;
+    border-radius: 12px !important;
+  }
+  .btn-primary, .btn-secondary {
+    min-height: 44px;
+  }
+}
+
+@media (min-width: 860px) {
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+  .desktop-tab-bar {
+    display: flex !important;
+  }
+}
+
 /* Print / PDF Stylesheet for Skimmer-Style Service Receipts */
 @media print {
   body {
@@ -272,3 +317,4 @@ input[type=range]::-webkit-slider-thumb:hover {
     box-shadow: none !important;
   }
 }
+

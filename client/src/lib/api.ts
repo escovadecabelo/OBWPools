@@ -89,6 +89,34 @@ export async function fetchPools(): Promise<Pool[]> {
   }
 }
 
+export async function createPoolApi(pool: Pool): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/pools`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pool)
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('Backend API offline, salvando piscina localmente', err);
+    return { message: 'Piscina salva localmente', pool };
+  }
+}
+
+export async function updatePoolApi(pool: Pool): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/pools/${pool.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pool)
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('Backend API offline, atualizando piscina localmente', err);
+    return { message: 'Piscina atualizada localmente', pool };
+  }
+}
+
 export async function fetchPoolTests(poolId: string): Promise<WaterTest[]> {
   try {
     const res = await fetch(`${API_BASE}/pools/${poolId}/tests`);

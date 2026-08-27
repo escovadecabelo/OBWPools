@@ -631,3 +631,53 @@ def get_pool_visits(pool_id: str) -> List[Dict[str, Any]]:
         result.append(d)
     conn.close()
     return result
+
+def save_pool_in_db(pool_data: Dict[str, Any]) -> Dict[str, Any]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    target_json = json.dumps(pool_data.get("target_params") or {})
+    
+    cursor.execute("""
+    INSERT OR REPLACE INTO pools (
+        id, name, customer_name, customer_phone, customer_email, address, latitude, longitude,
+        gate_code, pool_type, surface_type, sanitizer_type, volume_liters, volume_gallons,
+        clean_filter_psi, current_filter_psi, filter_type, pump_hp, daily_run_hours,
+        service_day, service_frequency, target_params, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        pool_data.get("id"),
+        pool_data.get("name"),
+        pool_data.get("customer_name"),
+        pool_data.get("customer_phone"),
+        pool_data.get("customer_email"),
+        pool_data.get("address"),
+        pool_data.get("latitude", 32.7767),
+        pool_data.get("longitude", -96.7970),
+        pool_data.get("gate_code"),
+        pool_data.get("pool_type", "Residencial"),
+        pool_data.get("surface_type", "PebbleTec / Pastilha"),
+        pool_data.get("sanitizer_type", "Gerador de Sal (SWG)"),
+        pool_data.get("volume_liters", 70000),
+        pool_data.get("volume_gallons", 18500),
+        pool_data.get("clean_filter_psi", 12.0),
+        pool_data.get("current_filter_psi", 12.0),
+        pool_data.get("filter_type", "Filtro de Cartucho"),
+        pool_data.get("pump_hp", 1.5),
+        pool_data.get("daily_run_hours", 8),
+        pool_data.get("service_day", "Segunda-feira"),
+        pool_data.get("service_frequency", "Semanal"),
+        target_json,
+        pool_data.get("created_at") or datetime.now().isoformat()
+    ))
+    conn.commit()
+    conn.close()
+    return pool_data
+
+def update_pool_in_db(pool_id: str, pool_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    existing = get_pool_by_id(pool_id)
+    if not existing:
+        return None
+    merged = {**existing, **pool_data, "id": pool_id}
+    return save_pool_in_db(merged)
+
+
