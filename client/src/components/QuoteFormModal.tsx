@@ -392,9 +392,13 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
                 <Phone size={14} color="#0284c7" />
                 <span>Direct Support: <strong>(754) 235-1214</strong></span>
               </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, color: '#0f172a' }}>
+                <Mail size={14} color="#0284c7" />
+                <span>Contact: <strong>contact@obwpools.com</strong></span>
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#0f172a' }}>
                 <Mail size={14} color="#0284c7" />
-                <span>Email: <strong>service@obwpools.com</strong></span>
+                <span>Service: <strong>service@obwpools.com</strong></span>
               </div>
             </div>
 

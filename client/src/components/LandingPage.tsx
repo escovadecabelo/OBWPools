@@ -618,7 +618,7 @@ export const LandingPage: React.FC = () => {
           display: 'inline-block'
         }}>
           <span style={{ fontSize: '0.9rem', color: '#475569' }}>
-            Don't see your neighborhood? Call us at <strong>(754) 235-1214</strong> to check our weekly route availability.
+            Don't see your neighborhood? Call <strong>(754) 235-1214</strong> or email <a href="mailto:contact@obwpools.com" style={{ color: '#0284c7', fontWeight: 700 }}>contact@obwpools.com</a>.
           </span>
         </div>
       </section>
@@ -657,6 +657,22 @@ export const LandingPage: React.FC = () => {
             >
               <Phone size={18} />
               <span>Call (754) 235-1214</span>
+            </a>
+
+            <a
+              href="mailto:contact@obwpools.com"
+              style={{
+                backgroundColor: 'transparent',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                color: '#ffffff',
+                padding: '14px 24px',
+                borderRadius: 10,
+                fontSize: '1rem',
+                fontWeight: 700,
+                textDecoration: 'none'
+              }}
+            >
+              contact@obwpools.com
             </a>
 
             <button
@@ -704,8 +720,9 @@ export const LandingPage: React.FC = () => {
           </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 20 }}>
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
             <a href="tel:7542351214" style={{ color: '#94a3b8', textDecoration: 'none' }}>📞 (754) 235-1214</a>
+            <a href="mailto:contact@obwpools.com" style={{ color: '#94a3b8', textDecoration: 'none' }}>✉️ contact@obwpools.com</a>
             <a href="mailto:service@obwpools.com" style={{ color: '#94a3b8', textDecoration: 'none' }}>✉️ service@obwpools.com</a>
           </div>
 

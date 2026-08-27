@@ -74,6 +74,7 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({ onOpenQuote }) => 
             <a key={item.href} href={item.href} onClick={close}>{item.label}</a>
           ))}
           <a href="tel:7542351214" onClick={close}>(754) 235-1214</a>
+          <a href="mailto:contact@obwpools.com" onClick={close}>contact@obwpools.com</a>
           <button type="button" className="landing-cta landing-cta-block" onClick={() => { close(); onOpenQuote(); }}>
             Get a free quote
           </button>
