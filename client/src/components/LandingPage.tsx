@@ -9,12 +9,10 @@ import { PricingCalculator } from './PricingCalculator';
 import { QuoteFormModal } from './QuoteFormModal';
 import { canSubmitLead } from '../lib/leadGuard';
 import { HoneypotField, TurnstileWidget } from './TurnstileWidget';
+import { LandingHeader } from './LandingHeader';
+import { LandingEnrichment } from './LandingEnrichment';
 
-interface LandingPageProps {
-  onLaunchApp: () => void;
-}
-
-export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
+export const LandingPage: React.FC = () => {
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [quoteInitialPlan, setQuoteInitialPlan] = useState('Salt Chem Plus ($220/mo)');
 
@@ -49,162 +47,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
   };
 
   return (
-    <div style={{
+    <div id="top" style={{
       minHeight: '100vh',
       backgroundColor: '#f8fafc',
       color: '#0f172a',
       fontFamily: "'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
     }}>
-      {/* 1. TOP UTILITY BAR (Subtle & Clean) */}
-      <div style={{
-        backgroundColor: '#0f172a',
-        color: '#94a3b8',
-        fontSize: '0.78rem',
-        padding: '6px 20px',
-        borderBottom: '1px solid rgba(255,255,255,0.08)'
-      }}>
-        <div style={{
-          maxWidth: 1200,
-          margin: '0 auto',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 8
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <span>📍 Serving Dallas-Fort Worth (Frisco, Plano, Southlake & Surrounding Areas)</span>
-            <span style={{ color: '#38bdf8' }}>•</span>
-            <span>⭐ 4.9/5 Rating on Google</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <a 
-              href="tel:7542351214" 
-              style={{ color: '#f8fafc', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}
-            >
-              <Phone size={12} color="#38bdf8" />
-              <span>(754) 235-1214</span>
-            </a>
-
-            {/* Small Discreet Portal Button for Technicians */}
-            <button
-              onClick={onLaunchApp}
-              style={{
-                background: 'transparent',
-                border: '1px solid rgba(255,255,255,0.2)',
-                borderRadius: 4,
-                color: '#94a3b8',
-                fontSize: '0.7rem',
-                padding: '2px 8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                transition: 'all 0.2s'
-              }}
-              title="Exclusive access for OBW Pools field technicians"
-            >
-              <Lock size={10} />
-              <span>Tech Portal</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. MAIN HEADER / NAVIGATION */}
-      <header style={{
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
-      }}>
-        <div style={{
-          maxWidth: 1200,
-          margin: '0 auto',
-          padding: '12px 20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 16
-        }}>
-          {/* Brand Logo */}
-          <a href="#" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
-            <img
-              src="/logo.png"
-              alt="OBW Pools"
-              style={{ height: 46, width: 'auto' }}
-            />
-            <div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                OBW <span style={{ color: '#0284c7' }}>POOLS</span>
-              </div>
-              <div style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                Cleaning • Maintenance • Repairs
-              </div>
-            </div>
-          </a>
-
-          {/* Navigation Links */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 28 }} className="desktop-nav">
-            <a href="#services" style={{ color: '#334155', textDecoration: 'none', fontSize: '0.92rem', fontWeight: 600 }}>
-              Services
-            </a>
-            <a href="#how-it-works" style={{ color: '#334155', textDecoration: 'none', fontSize: '0.92rem', fontWeight: 600 }}>
-              How It Works
-            </a>
-            <a href="#transformations" style={{ color: '#334155', textDecoration: 'none', fontSize: '0.92rem', fontWeight: 600 }}>
-              Before & After
-            </a>
-            <a href="#pricing" style={{ color: '#334155', textDecoration: 'none', fontSize: '0.92rem', fontWeight: 600 }}>
-              Plans & Pricing
-            </a>
-            <a href="#coverage" style={{ color: '#334155', textDecoration: 'none', fontSize: '0.92rem', fontWeight: 600 }}>
-              Service Areas
-            </a>
-          </nav>
-
-          {/* Direct CTA */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <a
-              href="tel:7542351214"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                color: '#0284c7',
-                textDecoration: 'none',
-                fontWeight: 700,
-                fontSize: '0.95rem'
-              }}
-              className="desktop-nav"
-            >
-              <Phone size={16} />
-              <span>(754) 235-1214</span>
-            </a>
-
-            <button
-              onClick={() => handleOpenQuote()}
-              style={{
-                backgroundColor: '#0284c7',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: 8,
-                padding: '10px 18px',
-                fontSize: '0.9rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)',
-                transition: 'background-color 0.2s'
-              }}
-            >
-              Get a Free Quote
-            </button>
-          </div>
-        </div>
-      </header>
+      <LandingHeader onOpenQuote={() => handleOpenQuote()} />
 
       {/* 3. HERO SECTION (Clean, Bright, Luxury Texas Pool Background with Quick Quote Card) */}
       <section style={{
@@ -548,6 +397,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
               desc: 'Heavy-duty oxidizer shock treatment, enzyme algaecide application, and complete turnaround for murky or storm-hit pools.',
               icon: ShieldCheck,
               img: 'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=600&auto=format&fit=crop&q=80'
+            },
+            {
+              title: 'Repairs & Equipment',
+              desc: 'Pumps, filters, heaters, salt cells and automation. We quote parts plus labor in USD and send the proposal on WhatsApp.',
+              icon: Wrench,
+              img: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80'
+            },
+            {
+              title: 'Texas Heat & Freeze Care',
+              desc: 'Summer UV chlorine protection, winter freeze-watch pump run, and filter pressure alerts so DFW weather does not wreck the pad.',
+              icon: ShieldCheck,
+              img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80'
             }
           ].map((s, idx) => (
             <div key={idx} style={{
@@ -671,6 +532,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
           </div>
         </div>
       </section>
+
+      <LandingEnrichment onOpenQuote={() => handleOpenQuote()} />
 
       {/* 7. BEFORE & AFTER SECTION */}
       <section id="transformations" style={{ padding: '80px 20px', maxWidth: 1100, margin: '0 auto' }}>
@@ -834,10 +697,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <img src="/logo.png" alt="OBW Pools" style={{ height: 32 }} />
-            <div>
-              <div style={{ color: '#ffffff', fontWeight: 800 }}>OBW POOLS LLC</div>
-              <div style={{ fontSize: '0.72rem' }}>Cleaning • Maintenance • Repairs</div>
-            </div>
+          <div>
+            <div style={{ color: '#ffffff', fontWeight: 800 }}>OBW POOLS LLC</div>
+            <div style={{ fontSize: '0.72rem' }}>Cleaning • Maintenance • Repairs</div>
+            <div style={{ fontSize: '0.7rem', marginTop: 4 }}>Licensed & insured · DFW weekly routes · Mon–Sat 7am–6pm</div>
+          </div>
           </div>
 
           <div style={{ display: 'flex', gap: 20 }}>
@@ -847,14 +711,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
 
           {/* Small Discreet Staff Portal Link */}
           <div>
-            <button
-              onClick={onLaunchApp}
+            <a
+              href="/portal"
               style={{
-                background: 'none',
-                border: 'none',
                 color: '#475569',
                 fontSize: '0.75rem',
-                cursor: 'pointer',
+                textDecoration: 'none',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 4
@@ -862,7 +724,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchApp }) => {
             >
               <Lock size={11} />
               <span>Internal Team Portal</span>
-            </button>
+            </a>
           </div>
         </div>
 

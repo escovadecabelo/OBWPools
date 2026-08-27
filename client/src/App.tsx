@@ -115,14 +115,8 @@ export function App() {
     setActiveTab('dosage');
   };
 
-  const launchPortal = useCallback(() => {
-    window.history.pushState({}, '', '/portal');
-    setViewMode('app');
-  }, []);
-
   const returnToSite = useCallback(() => {
-    window.history.pushState({}, '', '/');
-    setViewMode('landing');
+    window.location.assign('/');
   }, []);
 
   useEffect(() => {
@@ -170,7 +164,7 @@ export function App() {
   }
 
   if (viewMode === 'landing') {
-    return <LandingPage onLaunchApp={launchPortal} />;
+    return <LandingPage />;
   }
 
   return (
