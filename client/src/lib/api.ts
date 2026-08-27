@@ -1,4 +1,4 @@
-import type { Pool, WaterTest, ServiceVisit, Route, ServicePhoto } from '../types/pool';
+import type { Pool, WaterTest, ServiceVisit, Route, ServicePhoto, Technician } from '../types/pool';
 import { Capacitor } from '@capacitor/core';
 
 // Determina a URL base da API: no Android emulador usa 10.0.2.2, na web usa localhost ou URL configurada
@@ -15,6 +15,31 @@ export function getApiBaseUrl(): string {
 
 const API_BASE = getApiBaseUrl();
 
+export async function fetchTechnicians(): Promise<Technician[]> {
+  try {
+    const res = await fetch(`${API_BASE}/technicians`);
+    if (!res.ok) throw new Error('Falha ao carregar técnicos');
+    return await res.json();
+  } catch (err) {
+    console.warn('Backend API offline, usando fallback de técnicos', err);
+    return getFallbackTechnicians();
+  }
+}
+
+export async function saveTechnicianApi(tech: Partial<Technician>): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/technicians`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tech)
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('Backend API offline, simulando gravação de técnico', err);
+    return { message: 'Técnico gravado localmente' };
+  }
+}
+
 export async function fetchRoutes(): Promise<Route[]> {
   try {
     const res = await fetch(`${API_BASE}/routes`);
@@ -23,6 +48,74 @@ export async function fetchRoutes(): Promise<Route[]> {
   } catch (err) {
     console.warn('Backend API offline, usando fallback local de rotas', err);
     return getFallbackRoutes();
+  }
+}
+
+export async function createRouteApi(payload: Partial<Route>): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/routes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('Backend API offline, simulando criação de rota', err);
+    return { message: 'Rota criada localmente' };
+  }
+}
+
+export async function updateRouteApi(routeId: string, payload: Partial<Route>): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/routes/${routeId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('Backend API offline, simulando atualização de rota', err);
+    return { message: 'Rota atualizada localmente' };
+  }
+}
+
+export async function addStopToRouteApi(routeId: string, poolId: string, scheduledTime: string = '10:00'): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/routes/${routeId}/stops`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pool_id: poolId, scheduled_time: scheduledTime })
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('Backend API offline, simulando adição de parada', err);
+    return { message: 'Parada adicionada localmente' };
+  }
+}
+
+export async function removeStopFromRouteApi(stopId: string): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/routes/stops/${stopId}`, {
+      method: 'DELETE'
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('Backend API offline, simulando remoção de parada', err);
+    return { message: 'Parada removida localmente' };
+  }
+}
+
+export async function reassignStopApi(stopId: string, targetRouteId: string): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/routes/stops/${stopId}/reassign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_route_id: targetRouteId })
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('Backend API offline, simulando transferência de parada', err);
+    return { message: 'Parada transferida localmente' };
   }
 }
 
@@ -184,22 +277,23 @@ export async function sendHermesChatMessage(content: string, poolId?: string): P
 
 function getFallbackRoutes(): Route[] {
   const now = new Date().toISOString();
+  const todayStr = new Date().toISOString().split('T')[0];
   return [
     {
-      id: 'route-dfw-segunda',
+      id: 'route-tyler-segunda',
       technician_name: 'Tyler Brooks (DFW Senior Pool Tech)',
       technician_phone: '(214) 555-7890',
       day_of_week: 'Segunda-feira',
-      date: new Date().toISOString().split('T')[0],
-      total_stops: 5,
+      date: todayStr,
+      total_stops: 3,
       completed_stops: 1,
-      total_distance_km: 29.1,
-      estimated_travel_time_min: 58,
+      total_distance_km: 18.4,
+      estimated_travel_time_min: 38,
       status: 'Em Andamento',
       stops: [
         {
           stop_id: 'stop-1',
-          route_id: 'route-dfw-segunda',
+          route_id: 'route-tyler-segunda',
           pool_id: 'pool-1',
           pool_name: 'Stonebriar Creek Residence - Infinity Pool',
           customer_name: 'David & Sarah Harrison',
@@ -233,7 +327,7 @@ function getFallbackRoutes(): Route[] {
         },
         {
           stop_id: 'stop-2',
-          route_id: 'route-dfw-segunda',
+          route_id: 'route-tyler-segunda',
           pool_id: 'pool-5',
           pool_name: 'Willow Bend Luxury Oasis & Cascata',
           customer_name: 'Robert & Elena Chen',
@@ -249,23 +343,7 @@ function getFallbackRoutes(): Route[] {
         },
         {
           stop_id: 'stop-3',
-          route_id: 'route-dfw-segunda',
-          pool_id: 'pool-3',
-          pool_name: 'Craig Ranch Resort Clubhouse Pool',
-          customer_name: 'Craig Ranch Townhomes HOA',
-          customer_phone: '(469) 555-0177',
-          address: '6150 Collin McKinney Pkwy, McKinney, TX 75070',
-          latitude: 33.1550,
-          longitude: -96.7200,
-          order_index: 3,
-          scheduled_time: '10:30',
-          estimated_duration_min: 60,
-          status: 'Pendente',
-          photos: []
-        },
-        {
-          stop_id: 'stop-4',
-          route_id: 'route-dfw-segunda',
+          route_id: 'route-tyler-segunda',
           pool_id: 'pool-2',
           pool_name: 'Highland Park Club & Lap Pool',
           customer_name: 'Highland Park Estates HOA',
@@ -273,15 +351,45 @@ function getFallbackRoutes(): Route[] {
           address: '4200 Armstrong Pkwy, Highland Park, TX 75205',
           latitude: 32.8335,
           longitude: -96.8010,
-          order_index: 4,
-          scheduled_time: '13:00',
+          order_index: 3,
+          scheduled_time: '11:00',
           estimated_duration_min: 75,
+          status: 'Pendente',
+          photos: []
+        }
+      ]
+    },
+    {
+      id: 'route-marcus-segunda',
+      technician_name: 'Marcus Rodriguez (North DFW Tech)',
+      technician_phone: '(469) 555-3211',
+      day_of_week: 'Segunda-feira',
+      date: todayStr,
+      total_stops: 2,
+      completed_stops: 0,
+      total_distance_km: 14.2,
+      estimated_travel_time_min: 28,
+      status: 'Planejada',
+      stops: [
+        {
+          stop_id: 'stop-4',
+          route_id: 'route-marcus-segunda',
+          pool_id: 'pool-3',
+          pool_name: 'Craig Ranch Resort Clubhouse Pool',
+          customer_name: 'Craig Ranch Townhomes HOA',
+          customer_phone: '(469) 555-0177',
+          address: '6150 Collin McKinney Pkwy, McKinney, TX 75070',
+          latitude: 33.1550,
+          longitude: -96.7200,
+          order_index: 1,
+          scheduled_time: '08:30',
+          estimated_duration_min: 60,
           status: 'Pendente',
           photos: []
         },
         {
           stop_id: 'stop-5',
-          route_id: 'route-dfw-segunda',
+          route_id: 'route-marcus-segunda',
           pool_id: 'pool-4',
           pool_name: 'Sterling Manor & Heated Spa',
           customer_name: 'Dr. Michael & Amanda Sterling',
@@ -289,9 +397,55 @@ function getFallbackRoutes(): Route[] {
           address: '1280 Southlake Blvd, Southlake, TX 76092',
           latitude: 32.9412,
           longitude: -97.1340,
-          order_index: 5,
-          scheduled_time: '14:45',
+          order_index: 2,
+          scheduled_time: '10:15',
           estimated_duration_min: 50,
+          status: 'Pendente',
+          photos: []
+        }
+      ]
+    },
+    {
+      id: 'route-jake-terca',
+      technician_name: 'Jake Wilson (Dallas Tech)',
+      technician_phone: '(214) 555-6543',
+      day_of_week: 'Terça-feira',
+      date: todayStr,
+      total_stops: 2,
+      completed_stops: 0,
+      total_distance_km: 16.8,
+      estimated_travel_time_min: 32,
+      status: 'Planejada',
+      stops: [
+        {
+          stop_id: 'stop-6',
+          route_id: 'route-jake-terca',
+          pool_id: 'pool-2',
+          pool_name: 'Highland Park Club & Lap Pool',
+          customer_name: 'Highland Park Estates HOA',
+          customer_phone: '(214) 555-0188',
+          address: '4200 Armstrong Pkwy, Highland Park, TX 75205',
+          latitude: 32.8335,
+          longitude: -96.8010,
+          order_index: 1,
+          scheduled_time: '09:00',
+          estimated_duration_min: 60,
+          status: 'Pendente',
+          photos: []
+        },
+        {
+          stop_id: 'stop-7',
+          route_id: 'route-jake-terca',
+          pool_id: 'pool-1',
+          pool_name: 'Stonebriar Creek Residence - Infinity Pool',
+          customer_name: 'David & Sarah Harrison',
+          customer_phone: '(214) 555-0142',
+          address: '5420 Stonebriar Dr, Frisco, TX 75034',
+          latitude: 33.1250,
+          longitude: -96.8250,
+          order_index: 2,
+          scheduled_time: '10:45',
+          estimated_duration_min: 45,
           status: 'Pendente',
           photos: []
         }
@@ -498,3 +652,49 @@ function getFallbackVisits(poolId: string): ServiceVisit[] {
     }
   ];
 }
+
+function getFallbackTechnicians(): Technician[] {
+  return [
+    {
+      id: 'tech-1',
+      name: 'Tyler Brooks (DFW Senior Pool Tech)',
+      phone: '(214) 555-7890',
+      email: 'tyler@wandpool.com',
+      avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      role: 'Senior Tech (Frisco & Plano)',
+      assigned_routes_count: 1,
+      active_stops_count: 3
+    },
+    {
+      id: 'tech-2',
+      name: 'Marcus Rodriguez (North DFW Tech)',
+      phone: '(469) 555-3211',
+      email: 'marcus@wandpool.com',
+      avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      role: 'Route Tech (McKinney & Allen)',
+      assigned_routes_count: 1,
+      active_stops_count: 2
+    },
+    {
+      id: 'tech-3',
+      name: 'Jake Wilson (Dallas Tech)',
+      phone: '(214) 555-6543',
+      email: 'jake@wandpool.com',
+      avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+      role: 'Route Tech (Highland Park & Dallas)',
+      assigned_routes_count: 1,
+      active_stops_count: 2
+    },
+    {
+      id: 'tech-4',
+      name: 'Sarah Jenkins (West DFW Tech)',
+      phone: '(817) 555-9012',
+      email: 'sarah@wandpool.com',
+      avatar_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+      role: 'Route Tech (Southlake & Fort Worth)',
+      assigned_routes_count: 0,
+      active_stops_count: 0
+    }
+  ];
+}
+

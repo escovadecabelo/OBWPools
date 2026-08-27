@@ -20,9 +20,11 @@ from server.chemistry import (
     calculate_lsi, calculate_chemical_dosages, calculate_pool_volume
 )
 from server.db import (
-    init_db, get_connection, get_all_pools, get_pool_by_id,
+    init_db, get_connection, get_all_pools, get_pool_by_id, save_pool_in_db, update_pool_in_db,
     get_pool_tests, get_pool_visits, get_routes, get_route_by_id,
-    optimize_route_path, update_stop_photos_and_status
+    optimize_route_path, update_stop_photos_and_status,
+    get_all_technicians, get_technician_by_id, save_technician,
+    create_or_update_route, add_stop_to_route, remove_stop_from_route, reassign_stop_to_route
 )
 from server.hermes_pool_tools import (
     HERMES_POOL_TOOL_DEFINITIONS, handle_hermes_tool_call
@@ -34,8 +36,8 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="WandPool API",
-    description="Administração de Rotas, Otimização de Trajetos e Envio Automático de Fotos com Hermes Agent",
+    title="WandPool API - Route & Pool Management",
+    description="Administração de Rotas, Gestão de Técnicos, Otimização de Trajetos e Envio Automático de Fotos",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -58,10 +60,22 @@ def read_root():
         "app": "WandPool API",
         "status": "online",
         "version": "1.0.0",
-        "primary_focus": "Administração de Rotas, Otimização GPS & Envio de Fotos",
-        "language": "pt-BR",
-        "agent": "Hermes Pool Copilot"
+        "primary_focus": "Administração de Rotas por Funcionário, Otimização GPS & Envio de Fotos"
     }
+
+# ==========================================
+# ROTAS DE TÉCNICOS / FUNCIONÁRIOS
+# ==========================================
+
+@app.get("/api/technicians", response_model=List[Dict[str, Any]])
+def list_technicians():
+    """Retorna todos os técnicos e funcionários cadastrados."""
+    return get_all_technicians()
+
+@app.post("/api/technicians")
+def create_technician(payload: Dict[str, Any]):
+    """Cadastra ou atualiza um técnico."""
+    return save_technician(payload)
 
 # ==========================================
 # ROTAS DE ADMINISTRAÇÃO E OTIMIZAÇÃO (ROTAS)
@@ -80,6 +94,50 @@ def get_route(route_id: str):
         raise HTTPException(status_code=404, detail="Rota não encontrada.")
     return route
 
+@app.post("/api/routes")
+def create_route(payload: Dict[str, Any]):
+    """Cria uma nova rota para um funcionário."""
+    route = create_or_update_route(payload)
+    return {"message": "Rota criada com sucesso!", "route": route}
+
+@app.put("/api/routes/{route_id}")
+def update_route(route_id: str, payload: Dict[str, Any]):
+    """Atualiza dados de uma rota (técnico responsável, dia, status)."""
+    payload["id"] = route_id
+    route = create_or_update_route(payload)
+    return {"message": "Rota atualizada com sucesso!", "route": route}
+
+@app.post("/api/routes/{route_id}/stops")
+def add_stop(route_id: str, payload: Dict[str, Any]):
+    """Adiciona uma piscina/cliente à rota de um funcionário."""
+    pool_id = payload.get("pool_id")
+    sched_time = payload.get("scheduled_time", "10:00")
+    if not pool_id:
+        raise HTTPException(status_code=400, detail="pool_id é obrigatório.")
+    route = add_stop_to_route(route_id, pool_id, sched_time)
+    if not route:
+        raise HTTPException(status_code=404, detail="Piscina ou rota não encontrada.")
+    return {"message": "Parada adicionada à rota e trajeto reotimizado!", "route": route}
+
+@app.delete("/api/routes/stops/{stop_id}")
+def delete_stop(stop_id: str):
+    """Remove uma parada da rota."""
+    success = remove_stop_from_route(stop_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Parada não encontrada.")
+    return {"message": "Parada removida com sucesso!"}
+
+@app.post("/api/routes/stops/{stop_id}/reassign")
+def reassign_stop(stop_id: str, payload: Dict[str, Any]):
+    """Transfere uma parada da rota de um funcionário para a rota de outro funcionário."""
+    target_route_id = payload.get("target_route_id")
+    if not target_route_id:
+        raise HTTPException(status_code=400, detail="target_route_id é obrigatório.")
+    success = reassign_stop_to_route(stop_id, target_route_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Erro ao transferir parada.")
+    return {"message": "Parada transferida com sucesso para o novo funcionário!"}
+
 @app.post("/api/routes/optimize")
 def optimize_route(req: RouteOptimizeRequest):
     """
@@ -88,8 +146,8 @@ def optimize_route(req: RouteOptimizeRequest):
     """
     result = optimize_route_path(
         route_id=req.route_id,
-        start_lat=req.start_latitude or -23.5505,
-        start_lng=req.start_longitude or -46.6333
+        start_lat=req.start_latitude or 32.7767,
+        start_lng=req.start_longitude or -96.7970
     )
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])

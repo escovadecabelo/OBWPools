@@ -1,3 +1,14 @@
+export interface Technician {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  avatar_url?: string;
+  role: string;
+  assigned_routes_count?: number;
+  active_stops_count?: number;
+}
+
 export interface PoolTargetParams {
   target_ph: number;
   target_fc: number;

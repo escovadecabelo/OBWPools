@@ -50,10 +50,24 @@ def init_db():
     )
     """)
 
+    # Tabela de Técnicos / Funcionários (Technicians)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS technicians (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT,
+        avatar_url TEXT,
+        role TEXT DEFAULT 'Técnico de Rotas',
+        created_at TEXT
+    )
+    """)
+
     # Tabela de Rotas de Atendimento (Route Management)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS routes (
         id TEXT PRIMARY KEY,
+        technician_id TEXT,
         technician_name TEXT NOT NULL,
         technician_phone TEXT,
         day_of_week TEXT NOT NULL,
@@ -338,26 +352,52 @@ def seed_routes_data(cursor):
     now = datetime.now().isoformat()
     today_str = datetime.now().strftime("%Y-%m-%d")
 
-    # Rota DFW Norte (Segunda-feira)
-    route_id = "route-dfw-segunda"
+    # 1. Cadastro dos Técnicos / Funcionários
+    technicians_data = [
+        ("tech-1", "Tyler Brooks (DFW Senior Pool Tech)", "(214) 555-7890", "tyler@wandpool.com", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80", "Senior Tech (Frisco & Plano)", now),
+        ("tech-2", "Marcus Rodriguez (North DFW Tech)", "(469) 555-3211", "marcus@wandpool.com", "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80", "Route Tech (McKinney & Allen)", now),
+        ("tech-3", "Jake Wilson (Dallas Tech)", "(214) 555-6543", "jake@wandpool.com", "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80", "Route Tech (Highland Park & Dallas)", now),
+        ("tech-4", "Sarah Jenkins (West DFW Tech)", "(817) 555-9012", "sarah@wandpool.com", "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80", "Route Tech (Southlake & Fort Worth)", now),
+    ]
+
+    for t in technicians_data:
+        cursor.execute("""
+        INSERT OR REPLACE INTO technicians (id, name, phone, email, avatar_url, role, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, t)
+
+    # 2. Rotas por Técnico
+    # Rota 1: Tyler Brooks (Segunda-feira)
+    route_tyler = "route-tyler-segunda"
     cursor.execute("""
-    INSERT OR REPLACE INTO routes (id, technician_name, technician_phone, day_of_week, date, total_stops, completed_stops, total_distance_km, estimated_travel_time_min, status, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO routes (id, technician_id, technician_name, technician_phone, day_of_week, date, total_stops, completed_stops, total_distance_km, estimated_travel_time_min, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-        route_id,
-        "Tyler Brooks (DFW Senior Pool Tech)",
-        "(214) 555-7890",
-        "Segunda-feira",
-        today_str,
-        5,
-        1,
-        29.1,
-        58,
-        "Em Andamento",
-        now
+        route_tyler, "tech-1", "Tyler Brooks (DFW Senior Pool Tech)", "(214) 555-7890",
+        "Segunda-feira", today_str, 3, 1, 18.4, 38, "Em Andamento", now
     ))
 
-    # Fotos de Exemplo com visual Before / After
+    # Rota 2: Marcus Rodriguez (Segunda-feira)
+    route_marcus = "route-marcus-segunda"
+    cursor.execute("""
+    INSERT OR REPLACE INTO routes (id, technician_id, technician_name, technician_phone, day_of_week, date, total_stops, completed_stops, total_distance_km, estimated_travel_time_min, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        route_marcus, "tech-2", "Marcus Rodriguez (North DFW Tech)", "(469) 555-3211",
+        "Segunda-feira", today_str, 2, 0, 14.2, 28, "Planejada", now
+    ))
+
+    # Rota 3: Jake Wilson (Terça-feira)
+    route_jake = "route-jake-terca"
+    cursor.execute("""
+    INSERT OR REPLACE INTO routes (id, technician_id, technician_name, technician_phone, day_of_week, date, total_stops, completed_stops, total_distance_km, estimated_travel_time_min, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        route_jake, "tech-3", "Jake Wilson (Dallas Tech)", "(214) 555-6543",
+        "Terça-feira", today_str, 2, 0, 16.8, 32, "Planejada", now
+    ))
+
+    # Fotos de Exemplo
     photos_stop1 = json.dumps([
         {
           "id": "photo-1",
@@ -382,16 +422,38 @@ def seed_routes_data(cursor):
         }
     ])
 
-    # Paradas da Rota DFW
-    stops_data = [
-        ("stop-1", route_id, "pool-1", "Stonebriar Creek Residence", "David & Sarah Harrison", "(214) 555-0142", "5420 Stonebriar Dr, Frisco, TX", 33.1250, -96.8250, 1, "08:00", 45, "Concluído", now, photos_stop1, "pH 7.8 | Cloro 1.2 ppm | TA 120", "500ml Redutor pH + 300g Dicloro"),
-        ("stop-2", route_id, "pool-5", "Willow Bend Luxury Oasis", "Robert & Elena Chen", "(972) 555-0164", "2804 Willow Bend Dr, Plano, TX", 33.0368, -96.8122, 2, "09:15", 45, "A Caminho", None, "[]", "Aguardando medição", "Aguardando medição"),
-        ("stop-3", route_id, "pool-3", "Craig Ranch Resort Clubhouse", "Craig Ranch Townhomes HOA", "(469) 555-0177", "6150 Collin McKinney Pkwy, McKinney, TX", 33.1550, -96.7200, 3, "10:30", 60, "Pendente", None, "[]", "Aguardando medição", "Aguardando medição"),
-        ("stop-4", route_id, "pool-2", "Highland Park Club & Lap Pool", "Highland Park Estates HOA", "(214) 555-0188", "4200 Armstrong Pkwy, Highland Park, TX", 32.8335, -96.8010, 4, "13:00", 75, "Pendente", None, "[]", "Aguardando medição", "Aguardando medição"),
-        ("stop-5", route_id, "pool-4", "Sterling Manor & Heated Spa", "Dr. Michael & Amanda Sterling", "(817) 555-0198", "1280 Southlake Blvd, Southlake, TX", 32.9412, -97.1340, 5, "14:45", 50, "Pendente", None, "[]", "Aguardando medição", "Aguardando medição"),
+    # Paradas do Tyler (Rota 1)
+    stops_tyler = [
+        ("stop-1", route_tyler, "pool-1", "Stonebriar Creek Residence", "David & Sarah Harrison", "(214) 555-0142", "5420 Stonebriar Dr, Frisco, TX", 33.1250, -96.8250, 1, "08:00", 45, "Concluído", now, photos_stop1, "pH 7.8 | Cloro 1.2 ppm | TA 120", "500ml Redutor pH + 300g Dicloro"),
+        ("stop-2", route_tyler, "pool-5", "Willow Bend Luxury Oasis", "Robert & Elena Chen", "(972) 555-0164", "2804 Willow Bend Dr, Plano, TX", 33.0368, -96.8122, 2, "09:15", 45, "A Caminho", None, "[]", "Aguardando medição", "Aguardando medição"),
+        ("stop-3", route_tyler, "pool-2", "Highland Park Club & Lap Pool", "Highland Park Estates HOA", "(214) 555-0188", "4200 Armstrong Pkwy, Highland Park, TX", 32.8335, -96.8010, 3, "11:00", 75, "Pendente", None, "[]", "Aguardando medição", "Aguardando medição"),
     ]
 
-    for s in stops_data:
+    for s in stops_tyler:
+        cursor.execute("""
+        INSERT OR REPLACE INTO route_stops (stop_id, route_id, pool_id, pool_name, customer_name, customer_phone, address, latitude, longitude, order_index, scheduled_time, estimated_duration_min, status, completed_at, photos_json, water_test_summary, chemicals_summary)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, s)
+
+    # Paradas do Marcus (Rota 2)
+    stops_marcus = [
+        ("stop-4", route_marcus, "pool-3", "Craig Ranch Resort Clubhouse", "Craig Ranch Townhomes HOA", "(469) 555-0177", "6150 Collin McKinney Pkwy, McKinney, TX", 33.1550, -96.7200, 1, "08:30", 60, "Pendente", None, "[]", "Aguardando medição", "Aguardando medição"),
+        ("stop-5", route_marcus, "pool-4", "Sterling Manor & Heated Spa", "Dr. Michael & Amanda Sterling", "(817) 555-0198", "1280 Southlake Blvd, Southlake, TX", 32.9412, -97.1340, 2, "10:15", 50, "Pendente", None, "[]", "Aguardando medição", "Aguardando medição"),
+    ]
+
+    for s in stops_marcus:
+        cursor.execute("""
+        INSERT OR REPLACE INTO route_stops (stop_id, route_id, pool_id, pool_name, customer_name, customer_phone, address, latitude, longitude, order_index, scheduled_time, estimated_duration_min, status, completed_at, photos_json, water_test_summary, chemicals_summary)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, s)
+
+    # Paradas do Jake (Rota 3)
+    stops_jake = [
+        ("stop-6", route_jake, "pool-2", "Highland Park Club & Lap Pool", "Highland Park Estates HOA", "(214) 555-0188", "4200 Armstrong Pkwy, Highland Park, TX", 32.8335, -96.8010, 1, "09:00", 60, "Pendente", None, "[]", "Aguardando medição", "Aguardando medição"),
+        ("stop-7", route_jake, "pool-1", "Stonebriar Creek Residence", "David & Sarah Harrison", "(214) 555-0142", "5420 Stonebriar Dr, Frisco, TX", 33.1250, -96.8250, 2, "10:45", 45, "Pendente", None, "[]", "Aguardando medição", "Aguardando medição"),
+    ]
+
+    for s in stops_jake:
         cursor.execute("""
         INSERT OR REPLACE INTO route_stops (stop_id, route_id, pool_id, pool_name, customer_name, customer_phone, address, latitude, longitude, order_index, scheduled_time, estimated_duration_min, status, completed_at, photos_json, water_test_summary, chemicals_summary)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -679,5 +741,172 @@ def update_pool_in_db(pool_id: str, pool_data: Dict[str, Any]) -> Optional[Dict[
         return None
     merged = {**existing, **pool_data, "id": pool_id}
     return save_pool_in_db(merged)
+
+# ==========================================
+# GESTÃO DE TÉCNICOS & ROTAS POR FUNCIONÁRIO
+# ==========================================
+
+def get_all_technicians() -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM technicians ORDER BY name ASC")
+    tech_rows = cursor.fetchall()
+    technicians = []
+    for t in tech_rows:
+        td = dict(t)
+        # Conta rotas atribuídas
+        cursor.execute("SELECT COUNT(*), SUM(total_stops) FROM routes WHERE technician_name LIKE ? OR technician_id = ?", (f"%{td['name'].split()[0]}%", td["id"]))
+        rc = cursor.fetchone()
+        td["assigned_routes_count"] = rc[0] if rc else 0
+        td["active_stops_count"] = rc[1] if rc and rc[1] else 0
+        technicians.append(td)
+    conn.close()
+    return technicians
+
+def get_technician_by_id(tech_id: str) -> Optional[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM technicians WHERE id = ?", (tech_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def save_technician(tech_data: Dict[str, Any]) -> Dict[str, Any]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    tech_id = tech_data.get("id") or f"tech-{datetime.now().strftime('%M%S')}"
+    cursor.execute("""
+    INSERT OR REPLACE INTO technicians (id, name, phone, email, avatar_url, role, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (
+        tech_id,
+        tech_data.get("name"),
+        tech_data.get("phone", "(214) 555-0000"),
+        tech_data.get("email"),
+        tech_data.get("avatar_url", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"),
+        tech_data.get("role", "Técnico de Rotas"),
+        tech_data.get("created_at") or datetime.now().isoformat()
+    ))
+    conn.commit()
+    conn.close()
+    tech_data["id"] = tech_id
+    return tech_data
+
+def create_or_update_route(route_data: Dict[str, Any]) -> Dict[str, Any]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    route_id = route_data.get("id") or f"route-{datetime.now().strftime('%M%S')}"
+    
+    cursor.execute("""
+    INSERT OR REPLACE INTO routes (
+        id, technician_id, technician_name, technician_phone, day_of_week, date,
+        total_stops, completed_stops, total_distance_km, estimated_travel_time_min, status, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        route_id,
+        route_data.get("technician_id"),
+        route_data.get("technician_name"),
+        route_data.get("technician_phone"),
+        route_data.get("day_of_week", "Segunda-feira"),
+        route_data.get("date") or datetime.now().strftime("%Y-%m-%d"),
+        route_data.get("total_stops", 0),
+        route_data.get("completed_stops", 0),
+        route_data.get("total_distance_km", 0.0),
+        route_data.get("estimated_travel_time_min", 0),
+        route_data.get("status", "Planejada"),
+        route_data.get("created_at") or datetime.now().isoformat()
+    ))
+    conn.commit()
+    conn.close()
+    return get_route_by_id(route_id) or route_data
+
+def add_stop_to_route(route_id: str, pool_id: str, scheduled_time: str = "10:00") -> Optional[Dict[str, Any]]:
+    pool = get_pool_by_id(pool_id)
+    if not pool:
+        return None
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Próximo order_index
+    cursor.execute("SELECT MAX(order_index) FROM route_stops WHERE route_id = ?", (route_id,))
+    max_order = cursor.fetchone()[0] or 0
+    new_order = max_order + 1
+    
+    stop_id = f"stop-{pool_id}-{datetime.now().strftime('%M%S')}"
+    cursor.execute("""
+    INSERT INTO route_stops (
+        stop_id, route_id, pool_id, pool_name, customer_name, customer_phone, address,
+        latitude, longitude, order_index, scheduled_time, estimated_duration_min, status, photos_json
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendente', '[]')
+    """, (
+        stop_id, route_id, pool["id"], pool["name"], pool["customer_name"], pool.get("customer_phone"),
+        pool["address"], pool.get("latitude", 32.7767), pool.get("longitude", -96.7970),
+        new_order, scheduled_time, 45
+    ))
+    
+    # Atualiza total de paradas na rota
+    cursor.execute("""
+    UPDATE routes SET total_stops = (
+        SELECT COUNT(*) FROM route_stops WHERE route_id = ?
+    ) WHERE id = ?
+    """, (route_id, route_id))
+    
+    conn.commit()
+    conn.close()
+    return optimize_route_path(route_id)
+
+def remove_stop_from_route(stop_id: str) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Pega route_id antes de deletar
+    cursor.execute("SELECT route_id FROM route_stops WHERE stop_id = ?", (stop_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return False
+    
+    route_id = row[0]
+    cursor.execute("DELETE FROM route_stops WHERE stop_id = ?", (stop_id,))
+    
+    # Atualiza total de paradas na rota
+    cursor.execute("""
+    UPDATE routes SET total_stops = (
+        SELECT COUNT(*) FROM route_stops WHERE route_id = ?
+    ) WHERE id = ?
+    """, (route_id, route_id))
+    
+    conn.commit()
+    conn.close()
+    optimize_route_path(route_id)
+    return True
+
+def reassign_stop_to_route(stop_id: str, target_route_id: str) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT route_id FROM route_stops WHERE stop_id = ?", (stop_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return False
+    
+    old_route_id = row[0]
+    
+    # Atualiza route_id da parada
+    cursor.execute("UPDATE route_stops SET route_id = ?, status = 'Pendente' WHERE stop_id = ?", (target_route_id, stop_id))
+    
+    # Atualiza contagem de paradas de ambas as rotas
+    cursor.execute("UPDATE routes SET total_stops = (SELECT COUNT(*) FROM route_stops WHERE route_id = ?) WHERE id = ?", (old_route_id, old_route_id))
+    cursor.execute("UPDATE routes SET total_stops = (SELECT COUNT(*) FROM route_stops WHERE route_id = ?) WHERE id = ?", (target_route_id, target_route_id))
+    
+    conn.commit()
+    conn.close()
+    
+    optimize_route_path(old_route_id)
+    optimize_route_path(target_route_id)
+    return True
+
 
 
