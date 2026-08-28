@@ -1,3 +1,4 @@
+import React from 'react';
 import { 
   Home, Navigation, Users, Waves, FlaskConical, Calculator, 
   Box, Gauge, ClipboardCheck, ChevronDown, Plus, Truck, Wrench, Receipt, Globe 
@@ -26,70 +27,71 @@ export const Navbar: React.FC<NavbarProps> = ({
   const tabs = [
     { id: 'home', label: 'Início', icon: Home, isHighlight: true },
     { id: 'routes', label: 'Rotas do Dia', icon: Navigation, isPrimary: true },
-    { id: 'team', label: 'Funcionários', icon: Users },
-    { id: 'inventory', label: 'Estoque Caminhão', icon: Truck },
-    { id: 'work_orders', label: 'Ordens de Serviço', icon: Wrench },
-    { id: 'billing', label: 'Faturamento', icon: Receipt },
-    { id: 'clients', label: 'Clientes & Edição', icon: Users },
-    { id: 'dashboard', label: 'Painel Geral', icon: Waves },
+    { id: 'service', label: 'Visita Técnica', icon: ClipboardCheck },
     { id: 'lab', label: 'Laboratório & LSI', icon: FlaskConical },
     { id: 'dosage', label: 'Dosagem Química', icon: Calculator },
-    { id: 'volume', label: 'Calculadora de Volume', icon: Box },
+    { id: 'volume', label: 'Volume de Tanque', icon: Box },
     { id: 'equipment', label: 'Equipamentos & PSI', icon: Gauge },
-    { id: 'service', label: 'Visita Técnica', icon: ClipboardCheck },
+    { id: 'inventory', label: 'Estoque Caminhão', icon: Truck },
+    { id: 'clients', label: 'Clientes & Piscinas', icon: Users },
+    { id: 'work_orders', label: 'Ordens de Serviço', icon: Wrench },
+    { id: 'billing', label: 'Faturamento', icon: Receipt },
+    { id: 'team', label: 'Funcionários', icon: Users },
+    { id: 'dashboard', label: 'Painel Geral', icon: Waves },
   ];
 
   return (
     <header className="no-print" style={{
-      background: 'rgba(5, 11, 20, 0.96)',
-      backdropFilter: 'blur(20px)',
-      borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+      background: 'rgba(5, 11, 20, 0.97)',
+      backdropFilter: 'blur(24px)',
+      WebkitBackdropFilter: 'blur(24px)',
+      borderBottom: '1px solid rgba(0, 242, 254, 0.18)',
       position: 'sticky',
       top: 0,
-      zIndex: 50
+      zIndex: 80,
+      paddingTop: 'env(safe-area-inset-top, 0px)'
     }}>
       <div style={{
         maxWidth: 1400,
         margin: '0 auto',
-        padding: '10px 16px',
+        padding: '8px 12px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: 12
+        gap: 8
       }}>
-        {/* Brand Logo & Tagline */}
+        {/* Brand Logo */}
         <div 
           onClick={() => setActiveTab('home')}
-          style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flexShrink: 0 }}
         >
           <img
             src="/logo.png"
             alt="OBW Pools"
             style={{
-              height: 38,
+              height: 32,
               width: 'auto',
               objectFit: 'contain',
-              filter: 'drop-shadow(0 0 10px rgba(0, 242, 254, 0.4))'
+              filter: 'drop-shadow(0 0 10px rgba(0, 242, 254, 0.45))'
             }}
           />
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.02em' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                 OBW <span style={{ color: '#00f2fe' }}>Pools</span>
               </span>
-              <span className="badge badge-cyan" style={{ fontSize: '0.6rem', padding: '1px 6px' }}>
+              <span className="badge badge-cyan" style={{ fontSize: '0.55rem', padding: '0px 5px' }}>
                 PRO
               </span>
             </div>
-            <p style={{ fontSize: '0.68rem', color: '#94a3b8', margin: 0 }}>
-              Cleaning • Maintenance • Repairs
+            <p style={{ fontSize: '0.62rem', color: '#94a3b8', margin: 0, lineHeight: 1 }}>
+              Cleaning • Maintenance
             </p>
           </div>
         </div>
 
-        {/* Pool Quick Switcher */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        {/* Pool Quick Switcher & Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ position: 'relative' }}>
             <select
               value={selectedPool?.id || ''}
@@ -105,16 +107,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               }}
               style={{
                 appearance: 'none',
+                WebkitAppearance: 'none',
                 background: 'rgba(17, 34, 59, 0.95)',
-                border: '1px solid rgba(0, 242, 254, 0.3)',
-                borderRadius: 10,
+                border: '1px solid rgba(0, 242, 254, 0.35)',
+                borderRadius: 8,
                 color: '#f1f5f9',
-                padding: '8px 34px 8px 12px',
-                fontSize: '0.85rem',
+                padding: '6px 26px 6px 10px',
+                fontSize: '0.82rem',
                 fontWeight: 600,
                 cursor: 'pointer',
                 outline: 'none',
-                maxWidth: 280,
+                maxWidth: 'clamp(130px, 30vw, 240px)',
                 textOverflow: 'ellipsis',
                 overflow: 'hidden',
                 whiteSpace: 'nowrap'
@@ -126,15 +129,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </option>
               ))}
               <option value="all_clients" style={{ background: '#0a1526', color: '#4facfe', fontWeight: 700 }}>
-                👥 Gerenciar Todos os Clientes...
+                👥 Gerenciar Clientes...
               </option>
               <option value="new" style={{ background: '#0a1526', color: '#00f2fe', fontWeight: 700 }}>
-                ➕ Cadastrar Nova Piscina...
+                ➕ Nova Piscina...
               </option>
             </select>
-            <ChevronDown size={15} color="#00f2fe" style={{
+            <ChevronDown size={13} color="#00f2fe" style={{
               position: 'absolute',
-              right: 10,
+              right: 8,
               top: '50%',
               transform: 'translateY(-50%)',
               pointerEvents: 'none'
@@ -144,10 +147,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button 
             className="btn-secondary"
             onClick={onNewPoolClick}
-            style={{ padding: '7px 12px', fontSize: '0.8rem', borderRadius: 8 }}
+            style={{ 
+              padding: '6px 10px', 
+              fontSize: '0.78rem', 
+              borderRadius: 8,
+              minHeight: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4
+            }}
             title="Novo Cliente / Piscina"
           >
-            <Plus size={14} /> Novo
+            <Plus size={14} />
+            <span style={{ display: 'none', }} className="desktop-inline">Novo</span>
           </button>
 
           {onBackToLanding && (
@@ -156,21 +168,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
-                padding: '7px 12px',
+                gap: 5,
+                padding: '6px 10px',
                 borderRadius: 8,
                 background: 'rgba(0, 242, 254, 0.12)',
                 border: '1px solid rgba(0, 242, 254, 0.35)',
                 color: '#00f2fe',
-                fontSize: '0.8rem',
+                fontSize: '0.78rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                transition: 'all 0.15s ease'
+                transition: 'all 0.15s ease',
+                flexShrink: 0
               }}
               title="Voltar ao Website Oficial"
             >
               <Globe size={14} />
-              <span>Voltar ao Site</span>
+              <span>Site</span>
             </button>
           )}
         </div>
@@ -197,8 +210,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 7,
-                padding: '9px 14px',
-                fontSize: '0.85rem',
+                padding: '8px 12px',
+                fontSize: '0.84rem',
                 fontWeight: isActive ? 700 : 500,
                 color: isActive ? '#00f2fe' : '#94a3b8',
                 background: isActive ? 'rgba(0, 242, 254, 0.12)' : 'transparent',

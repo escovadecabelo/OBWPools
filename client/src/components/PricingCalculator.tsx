@@ -45,8 +45,8 @@ export const PricingCalculator: React.FC<PricingCalculatorProps> = ({ onOpenQuot
       {/* 3 Main Tiers */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-        gap: 24,
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
+        gap: 'clamp(16px, 3vw, 24px)',
         marginBottom: 40
       }}>
         {/* Tier 1: Standard */}

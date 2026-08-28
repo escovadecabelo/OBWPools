@@ -163,7 +163,7 @@ export const TeamManager: React.FC<TeamManagerProps> = ({ onNavigateToRoute }) =
       </div>
 
       {/* 3. TECHNICIANS GRID */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 16 }}>
         {technicians.map((tech) => {
           const techRoutes = routes.filter(r => 
             r.technician_name === tech.name || 

@@ -99,7 +99,7 @@ export const DosageCalculator: React.FC<DosageCalculatorProps> = ({
       </div>
 
       {/* Grid: Inputs (Left) and Chemical Dosage Recipes (Right) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 'clamp(14px, 3vw, 24px)' }}>
         
         {/* LEFT: Current vs Target Controls */}
         <div className="glass-panel" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>

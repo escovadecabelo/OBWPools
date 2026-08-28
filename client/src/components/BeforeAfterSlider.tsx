@@ -62,8 +62,8 @@ export const BeforeAfterSlider: React.FC = () => {
     const rect = containerRef.current.getBoundingClientRect();
     const x = clientX - rect.left;
     let percentage = (x / rect.width) * 100;
-    if (percentage < 2) percentage = 2;
-    if (percentage > 98) percentage = 98;
+    if (percentage < 3) percentage = 3;
+    if (percentage > 97) percentage = 97;
     setSliderPosition(percentage);
   }, []);
 
@@ -75,11 +75,20 @@ export const BeforeAfterSlider: React.FC = () => {
     handleMove(e.clientX);
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsDragging(true);
+    if (e.touches.length > 0) {
+      handleMove(e.touches[0].clientX);
+    }
+  };
+
   const handleTouchMove = (e: React.TouchEvent) => {
     if (e.touches.length > 0) {
       handleMove(e.touches[0].clientX);
     }
   };
+
+  const handleTouchEnd = () => setIsDragging(false);
 
   const handleClickContainer = (e: React.MouseEvent) => {
     handleMove(e.clientX);
@@ -87,13 +96,16 @@ export const BeforeAfterSlider: React.FC = () => {
 
   return (
     <div style={{ width: '100%', maxWidth: 1000, margin: '0 auto' }}>
-      {/* Case Selector Tabs */}
+      {/* Case Selector Tabs with Horizontal Touch Scroll */}
       <div style={{
         display: 'flex',
         gap: 8,
         marginBottom: 16,
-        justifyContent: 'center',
-        flexWrap: 'wrap'
+        justifyContent: 'flex-start',
+        overflowX: 'auto',
+        padding: '4px 2px 10px',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none'
       }}>
         {CASES.map((item, idx) => (
           <button
@@ -105,13 +117,16 @@ export const BeforeAfterSlider: React.FC = () => {
             style={{
               padding: '8px 16px',
               borderRadius: 20,
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
               fontWeight: 700,
               cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
               border: activeCaseIndex === idx ? '2px solid #0284c7' : '1px solid #cbd5e1',
               backgroundColor: activeCaseIndex === idx ? '#0284c7' : '#ffffff',
               color: activeCaseIndex === idx ? '#ffffff' : '#475569',
-              boxShadow: activeCaseIndex === idx ? '0 2px 8px rgba(2, 132, 199, 0.25)' : 'none'
+              boxShadow: activeCaseIndex === idx ? '0 4px 12px rgba(2, 132, 199, 0.25)' : 'none',
+              transition: 'all 0.15s ease'
             }}
           >
             {item.title} ({item.location})
@@ -126,17 +141,21 @@ export const BeforeAfterSlider: React.FC = () => {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         style={{
           position: 'relative',
           width: '100%',
-          height: 'clamp(320px, 45vw, 480px)',
+          height: 'clamp(280px, 48vw, 460px)',
           borderRadius: 16,
           overflow: 'hidden',
           cursor: isDragging ? 'ew-resize' : 'pointer',
           userSelect: 'none',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.12)',
-          border: '1px solid #cbd5e1'
+          WebkitUserSelect: 'none',
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.15)',
+          border: '1px solid #cbd5e1',
+          touchAction: 'pan-y' // Allows natural vertical page scrolling while enabling horizontal sliding
         }}
       >
         {/* AFTER Image (Background full width) */}
@@ -149,28 +168,30 @@ export const BeforeAfterSlider: React.FC = () => {
             left: 0,
             width: '100%',
             height: '100%',
-            objectFit: 'cover'
+            objectFit: 'cover',
+            pointerEvents: 'none'
           }}
         />
 
         {/* AFTER Badge (Top Right) */}
         <div style={{
           position: 'absolute',
-          top: 16,
-          right: 16,
-          backgroundColor: 'rgba(15, 23, 42, 0.85)',
-          backdropFilter: 'blur(6px)',
-          padding: '6px 14px',
+          top: 12,
+          right: 12,
+          backgroundColor: 'rgba(15, 23, 42, 0.88)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          padding: '5px 12px',
           borderRadius: 20,
           color: '#34d399',
-          fontSize: '0.8rem',
+          fontSize: '0.75rem',
           fontWeight: 800,
           display: 'flex',
           alignItems: 'center',
-          gap: 6,
+          gap: 5,
           zIndex: 5
         }}>
-          <Sparkles size={14} />
+          <Sparkles size={13} />
           <span>AFTER (OBW Pools)</span>
         </div>
 
@@ -182,7 +203,8 @@ export const BeforeAfterSlider: React.FC = () => {
           width: '100%',
           height: '100%',
           clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)`,
-          overflow: 'hidden'
+          overflow: 'hidden',
+          pointerEvents: 'none'
         }}>
           <img
             src={activeCase.beforeImg}
@@ -197,21 +219,22 @@ export const BeforeAfterSlider: React.FC = () => {
           {/* BEFORE Badge (Top Left) */}
           <div style={{
             position: 'absolute',
-            top: 16,
-            left: 16,
-            backgroundColor: 'rgba(15, 23, 42, 0.85)',
-            backdropFilter: 'blur(6px)',
-            padding: '6px 14px',
+            top: 12,
+            left: 12,
+            backgroundColor: 'rgba(15, 23, 42, 0.88)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            padding: '5px 12px',
             borderRadius: 20,
             color: '#f87171',
-            fontSize: '0.8rem',
+            fontSize: '0.75rem',
             fontWeight: 800,
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
+            gap: 5,
             zIndex: 5
           }}>
-            <AlertTriangle size={14} />
+            <AlertTriangle size={13} />
             <span>BEFORE</span>
           </div>
         </div>
@@ -224,9 +247,10 @@ export const BeforeAfterSlider: React.FC = () => {
           left: `${sliderPosition}%`,
           width: 3,
           backgroundColor: '#ffffff',
-          boxShadow: '0 0 10px rgba(0,0,0,0.5)',
+          boxShadow: '0 0 12px rgba(0,0,0,0.6)',
           transform: 'translateX(-50%)',
-          zIndex: 10
+          zIndex: 10,
+          pointerEvents: 'none'
         }}>
           {/* Draggable Handle Button */}
           <div
@@ -237,20 +261,21 @@ export const BeforeAfterSlider: React.FC = () => {
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               borderRadius: '50%',
               backgroundColor: '#0284c7',
-              border: '2px solid #ffffff',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+              border: '3px solid #ffffff',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.4), 0 0 10px rgba(2, 132, 199, 0.5)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'ew-resize',
-              color: '#ffffff'
+              color: '#ffffff',
+              pointerEvents: 'auto'
             }}
           >
-            <MoveHorizontal size={18} />
+            <MoveHorizontal size={20} />
           </div>
         </div>
       </div>
@@ -259,30 +284,31 @@ export const BeforeAfterSlider: React.FC = () => {
       <div style={{
         marginTop: 14,
         backgroundColor: '#ffffff',
-        borderRadius: 12,
-        padding: '16px 20px',
+        borderRadius: 14,
+        padding: '16px 18px',
         border: '1px solid #e2e8f0',
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-        gap: 16,
-        alignItems: 'center'
+        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+        gap: 14,
+        alignItems: 'center',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
       }}>
         <div>
-          <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+          <div style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a' }}>
             {activeCase.title}
           </div>
           <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: 2 }}>
-            <strong style={{ color: '#dc2626' }}>Initial Problem:</strong> {activeCase.problem}
+            <strong style={{ color: '#dc2626' }}>Problema Inicial:</strong> {activeCase.problem}
           </div>
         </div>
 
-        <div style={{ borderLeft: '1px solid #f1f5f9', paddingLeft: 16 }}>
+        <div style={{ borderLeft: '1px solid #f1f5f9', paddingLeft: 14 }}>
           <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-            <strong style={{ color: '#16a34a' }}>OBW Solution:</strong> {activeCase.solution}
+            <strong style={{ color: '#16a34a' }}>Solução OBW:</strong> {activeCase.solution}
           </div>
           <div style={{ fontSize: '0.8rem', color: '#0284c7', fontWeight: 700, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
             <CheckCircle2 size={14} />
-            <span>Water Status: {activeCase.lsiAfter}</span>
+            <span>Resultado: {activeCase.lsiAfter}</span>
           </div>
         </div>
       </div>

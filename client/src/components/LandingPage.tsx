@@ -58,18 +58,18 @@ export const LandingPage: React.FC = () => {
       {/* 3. HERO SECTION (Clean, Bright, Luxury Texas Pool Background with Quick Quote Card) */}
       <section style={{
         position: 'relative',
-        backgroundImage: 'linear-gradient(to right, rgba(15, 23, 42, 0.88) 0%, rgba(15, 23, 42, 0.65) 55%, rgba(15, 23, 42, 0.3) 100%), url(https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=1600&auto=format&fit=crop&q=85)',
+        backgroundImage: 'linear-gradient(to right, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.72) 55%, rgba(15, 23, 42, 0.4) 100%), url(https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=1600&auto=format&fit=crop&q=85)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        padding: '70px 20px 85px 20px',
+        padding: 'clamp(40px, 6vw, 75px) 16px clamp(48px, 7vw, 85px)',
         color: '#ffffff'
       }}>
         <div style={{
           maxWidth: 1200,
           margin: '0 auto',
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: 40,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
+          gap: 'clamp(24px, 4vw, 40px)',
           alignItems: 'center'
         }}>
           {/* Left Column: Value Proposition */}
@@ -756,6 +756,55 @@ export const LandingPage: React.FC = () => {
           © {new Date().getFullYear()} OBW Pools LLC. All rights reserved. Dallas-Fort Worth Metroplex.
         </div>
       </footer>
+
+      {/* Mobile Sticky Quick Contact Bar */}
+      <div className="landing-mobile-sticky-bar">
+        <a
+          href="tel:7542351214"
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            padding: '12px',
+            borderRadius: 10,
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#f8fafc',
+            fontWeight: 700,
+            fontSize: '0.85rem',
+            textDecoration: 'none'
+          }}
+        >
+          <Phone size={16} color="#38bdf8" />
+          <span>Ligar</span>
+        </a>
+
+        <button
+          type="button"
+          onClick={() => handleOpenQuote()}
+          style={{
+            flex: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            padding: '12px',
+            borderRadius: 10,
+            backgroundColor: '#0284c7',
+            border: 'none',
+            color: '#ffffff',
+            fontWeight: 800,
+            fontSize: '0.88rem',
+            cursor: 'pointer',
+            boxShadow: '0 4px 15px rgba(2, 132, 199, 0.4)'
+          }}
+        >
+          <MessageSquare size={16} />
+          <span>Orçamento Grátis</span>
+        </button>
+      </div>
 
       {/* Quote Form Modal */}
       <QuoteFormModal

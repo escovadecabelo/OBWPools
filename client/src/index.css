@@ -253,21 +253,30 @@ input[type=range]::-webkit-slider-thumb:hover {
   animation: pulse-glow 3s infinite ease-in-out;
 }
 
-/* Mobile Android Bottom Navigation Bar */
+/* Mobile Android / iOS Ergonomics & Bottom Navigation Bar */
 .mobile-bottom-nav {
   display: none;
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 64px;
-  background: rgba(4, 9, 18, 0.98);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(0, 242, 254, 0.2);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.6);
-  z-index: 90;
+  height: 68px;
+  background: rgba(4, 10, 20, 0.97);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(0, 242, 254, 0.22);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.7);
+  z-index: 100;
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Touch Action & Tap Highlight */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a, select, input[type="range"] {
+  touch-action: manipulation;
 }
 
 @media (max-width: 859px) {
@@ -278,13 +287,19 @@ input[type=range]::-webkit-slider-thumb:hover {
     display: block !important;
   }
   main {
-    padding: 12px 12px 75px !important;
+    padding: 12px 12px 90px !important;
   }
   .glass-panel {
     padding: 16px !important;
-    border-radius: 12px !important;
+    border-radius: 14px !important;
   }
   .btn-primary, .btn-secondary {
+    min-height: 46px;
+    padding: 10px 16px;
+    font-size: 0.92rem;
+  }
+  .input-control, input, select, textarea {
+    font-size: 16px !important; /* Prevents auto-zoom on iOS */
     min-height: 44px;
   }
 }
@@ -296,6 +311,79 @@ input[type=range]::-webkit-slider-thumb:hover {
   .desktop-tab-bar {
     display: flex !important;
   }
+}
+
+/* Mobile Drawer / Bottom Sheet */
+.mobile-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 14, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+.mobile-drawer-sheet {
+  background: linear-gradient(180deg, #0a172a 0%, #050c18 100%);
+  border-top: 1px solid rgba(0, 242, 254, 0.35);
+  border-radius: 24px 24px 0 0;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -12px 40px rgba(0, 242, 254, 0.2);
+  padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 16px);
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  overflow: hidden;
+}
+
+.mobile-drawer-handle {
+  width: 44px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  margin: 12px auto 6px;
+  flex-shrink: 0;
+}
+
+/* Mobile Sticky Bottom CTA for Landing Page */
+.landing-mobile-sticky-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(5, 14, 28, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(0, 242, 254, 0.25);
+  padding: 10px 14px calc(env(safe-area-inset-bottom, 0px) + 10px);
+  z-index: 95;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 768px) {
+  .landing-mobile-sticky-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  body.has-mobile-cta {
+    padding-bottom: 74px;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 
 /* Smooth Scroll for Landing Page Anchor Navigation */
@@ -324,25 +412,39 @@ html {
 .landing-header-inner {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 12px 22px;
+  padding: 10px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 12px;
+}
+
+@media (min-width: 768px) {
+  .landing-header-inner {
+    padding: 12px 22px;
+    gap: 20px;
+  }
 }
 
 .landing-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   text-decoration: none;
-  min-width: 220px;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .landing-brand {
+    gap: 12px;
+    min-width: 220px;
+  }
 }
 
 .landing-brand-mark {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   background: radial-gradient(circle at 30% 20%, rgba(0, 242, 254, 0.35), rgba(7, 22, 42, 0.9));
@@ -350,6 +452,14 @@ html {
   box-shadow: 0 0 22px rgba(0, 242, 254, 0.22);
   overflow: hidden;
   flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .landing-brand-mark {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+  }
 }
 
 .landing-brand-mark img {

@@ -172,7 +172,7 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({
           </button>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 18 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 16 }}>
           {filteredPools.map((pool) => (
             <div
               key={pool.id}

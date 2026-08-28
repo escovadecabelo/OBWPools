@@ -94,7 +94,7 @@ export const VolumeCalculator: React.FC<VolumeCalculatorProps> = ({
       </div>
 
       {/* Grid: Inputs and 2D/3D SVG Diagram */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 'clamp(14px, 3vw, 24px)' }}>
         
         {/* Dimensions Inputs */}
         <div className="glass-panel" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -103,7 +103,7 @@ export const VolumeCalculator: React.FC<VolumeCalculatorProps> = ({
           </h2>
 
           {shape !== 'redonda' ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 16 }}>
               <div>
                 <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f1f5f9', display: 'block', marginBottom: 6 }}>
                   Comprimento: <strong>{lengthFt} ft</strong> <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>({(lengthFt * 0.3048).toFixed(1)}m)</span>

@@ -132,7 +132,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Main Stats Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 'clamp(14px, 3vw, 20px)' }}>
         {/* Score Card */}
         <div className="glass-panel" style={{ padding: 24, display: 'flex', alignItems: 'center', gap: 20 }}>
           <div style={{

@@ -288,10 +288,15 @@ export function App() {
         )}
       </main>
 
-      {/* Mobile Android Bottom Navigation Bar */}
+      {/* Mobile Android / iOS Bottom Navigation Bar & Drawer */}
       <BottomNav
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        onBackToLanding={returnToSite}
+        pools={pools}
+        selectedPool={selectedPool}
+        onSelectPool={setSelectedPool}
+        onNewPoolClick={() => setIsModalOpen(true)}
       />
 
       {/* Modal de Criação de Piscina */}

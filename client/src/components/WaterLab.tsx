@@ -108,7 +108,7 @@ export const WaterLab: React.FC<WaterLabProps> = ({
       </div>
 
       {/* Main Split */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: 'clamp(14px, 3vw, 24px)' }}>
         
         {/* LEFT: Parameter Sliders */}
         <div className="glass-panel" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>

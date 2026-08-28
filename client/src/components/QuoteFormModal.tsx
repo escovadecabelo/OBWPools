@@ -166,7 +166,7 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
                     Phone / Mobile *
@@ -182,7 +182,7 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
                       padding: '10px 12px',
                       borderRadius: 8,
                       border: '1px solid #cbd5e1',
-                      fontSize: '0.9rem',
+                      fontSize: '1rem',
                       color: '#0f172a'
                     }}
                   />
@@ -202,14 +202,14 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
                       padding: '10px 12px',
                       borderRadius: 8,
                       border: '1px solid #cbd5e1',
-                      fontSize: '0.9rem',
+                      fontSize: '1rem',
                       color: '#0f172a'
                     }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: 4 }}>
                     City in DFW
@@ -222,7 +222,7 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
                       padding: '10px 12px',
                       borderRadius: 8,
                       border: '1px solid #cbd5e1',
-                      fontSize: '0.9rem',
+                      fontSize: '1rem',
                       color: '#0f172a',
                       backgroundColor: '#ffffff'
                     }}
@@ -251,7 +251,7 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
                       padding: '10px 12px',
                       borderRadius: 8,
                       border: '1px solid #cbd5e1',
-                      fontSize: '0.9rem',
+                      fontSize: '1rem',
                       color: '#0f172a',
                       backgroundColor: '#ffffff'
                     }}
