@@ -1,6 +1,7 @@
 """
 WandPool SQLite Database Layer
 Administração de rotas, otimização de trajeto, cadastro de piscinas, comprovantes digitais e fotos.
+Camada de segurança: Multi-tenant Scoping, Blindagem Anti-IDOR e Proteção de Gate Codes.
 """
 
 import sqlite3
@@ -11,6 +12,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "wandpool.db")
+DEFAULT_TENANT_ID = os.getenv("DEFAULT_TENANT_ID", "org-obw-dfw")
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
@@ -21,7 +23,7 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Tabela de Piscinas / Clientes com Latitude e Longitude
+    # Tabela de Piscinas / Clientes com Latitude, Longitude e Tenant
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS pools (
         id TEXT PRIMARY KEY,
@@ -46,6 +48,7 @@ def init_db():
         service_day TEXT DEFAULT 'Segunda-feira',
         service_frequency TEXT DEFAULT 'Semanal',
         target_params TEXT,
+        tenant_id TEXT DEFAULT 'org-obw-dfw',
         created_at TEXT
     )
     """)
@@ -59,6 +62,7 @@ def init_db():
         email TEXT,
         avatar_url TEXT,
         role TEXT DEFAULT 'Técnico de Rotas',
+        tenant_id TEXT DEFAULT 'org-obw-dfw',
         created_at TEXT
     )
     """)
@@ -77,6 +81,7 @@ def init_db():
         total_distance_km REAL DEFAULT 0.0,
         estimated_travel_time_min INTEGER DEFAULT 0,
         status TEXT DEFAULT 'Em Andamento',
+        tenant_id TEXT DEFAULT 'org-obw-dfw',
         created_at TEXT
     )
     """)
@@ -101,6 +106,7 @@ def init_db():
         photos_json TEXT,
         water_test_summary TEXT,
         chemicals_summary TEXT,
+        tenant_id TEXT DEFAULT 'org-obw-dfw',
         FOREIGN KEY (route_id) REFERENCES routes (id),
         FOREIGN KEY (pool_id) REFERENCES pools (id)
     )
@@ -124,6 +130,7 @@ def init_db():
         lsi_score REAL,
         lsi_status TEXT,
         technician_notes TEXT,
+        tenant_id TEXT DEFAULT 'org-obw-dfw',
         FOREIGN KEY (pool_id) REFERENCES pools (id)
     )
     """)
@@ -146,6 +153,7 @@ def init_db():
         status TEXT DEFAULT 'Concluído',
         door_hanger_sent INTEGER DEFAULT 1,
         whatsapp_dispatched INTEGER DEFAULT 1,
+        tenant_id TEXT DEFAULT 'org-obw-dfw',
         FOREIGN KEY (pool_id) REFERENCES pools (id)
     )
     """)
@@ -157,9 +165,18 @@ def init_db():
         pool_id TEXT,
         role TEXT NOT NULL,
         content TEXT NOT NULL,
+        tenant_id TEXT DEFAULT 'org-obw-dfw',
         timestamp TEXT NOT NULL
     )
     """)
+
+    # Migrações automáticas para bancos existentes (garantir tenant_id)
+    tables = ['pools', 'technicians', 'routes', 'route_stops', 'water_tests', 'service_visits', 'chat_history']
+    for table in tables:
+        try:
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN tenant_id TEXT DEFAULT 'org-obw-dfw'")
+        except sqlite3.OperationalError:
+            pass # Coluna já existe
 
     conn.commit()
 
@@ -183,13 +200,14 @@ def seed_data(cursor):
 def seed_pools_data(cursor):
     now = datetime.now().isoformat()
 
+    # Dados anonimizados e seguros (Mocks Sintéticos para demonstração segura)
     # 1. Frisco - Stonebriar Creek Residence (Residencial)
     target_1 = json.dumps({
         "target_ph": 7.5, "target_fc": 3.5, "target_ta": 90.0, "target_ch": 280.0, "target_cya": 70.0, "target_salt": 3200.0
     })
     cursor.execute("""
-    INSERT OR REPLACE INTO pools (id, name, customer_name, customer_phone, customer_email, address, latitude, longitude, gate_code, pool_type, surface_type, sanitizer_type, volume_liters, volume_gallons, clean_filter_psi, current_filter_psi, filter_type, pump_hp, daily_run_hours, service_day, service_frequency, target_params, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO pools (id, name, customer_name, customer_phone, customer_email, address, latitude, longitude, gate_code, pool_type, surface_type, sanitizer_type, volume_liters, volume_gallons, clean_filter_psi, current_filter_psi, filter_type, pump_hp, daily_run_hours, service_day, service_frequency, target_params, tenant_id, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         "pool-1",
         "Stonebriar Creek Residence - Infinity Pool",
@@ -199,7 +217,7 @@ def seed_pools_data(cursor):
         "5420 Stonebriar Dr, Frisco, TX 75034",
         33.1250,
         -96.8250,
-        "Gate #4821",
+        "MOCK-GATE-#1001",
         "Residencial",
         "PebbleTec / Pastilha",
         "Gerador de Sal (SWG)",
@@ -213,6 +231,7 @@ def seed_pools_data(cursor):
         "Segunda-feira",
         "Semanal",
         target_1,
+        DEFAULT_TENANT_ID,
         now
     ))
 
@@ -221,8 +240,8 @@ def seed_pools_data(cursor):
         "target_ph": 7.4, "target_fc": 4.0, "target_ta": 100.0, "target_ch": 300.0, "target_cya": 45.0, "target_salt": 0.0
     })
     cursor.execute("""
-    INSERT OR REPLACE INTO pools (id, name, customer_name, customer_phone, customer_email, address, latitude, longitude, gate_code, pool_type, surface_type, sanitizer_type, volume_liters, volume_gallons, clean_filter_psi, current_filter_psi, filter_type, pump_hp, daily_run_hours, service_day, service_frequency, target_params, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO pools (id, name, customer_name, customer_phone, customer_email, address, latitude, longitude, gate_code, pool_type, surface_type, sanitizer_type, volume_liters, volume_gallons, clean_filter_psi, current_filter_psi, filter_type, pump_hp, daily_run_hours, service_day, service_frequency, target_params, tenant_id, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         "pool-2",
         "Highland Park Club & Lap Pool",
@@ -232,7 +251,7 @@ def seed_pools_data(cursor):
         "4200 Armstrong Pkwy, Highland Park, TX 75205",
         32.8335,
         -96.8010,
-        "Keycard Guarita Leste",
+        "MOCK-KEYCARD-HP",
         "Comercial / Condomínio (HOA)",
         "Alvenaria / Azulejo Branco",
         "Cloro Tradicional + UV Comercial",
@@ -246,6 +265,7 @@ def seed_pools_data(cursor):
         "Segunda-feira",
         "Semanal",
         target_2,
+        DEFAULT_TENANT_ID,
         now
     ))
 
@@ -254,8 +274,8 @@ def seed_pools_data(cursor):
         "target_ph": 7.4, "target_fc": 3.5, "target_ta": 95.0, "target_ch": 275.0, "target_cya": 40.0, "target_salt": 0.0
     })
     cursor.execute("""
-    INSERT OR REPLACE INTO pools (id, name, customer_name, customer_phone, customer_email, address, latitude, longitude, gate_code, pool_type, surface_type, sanitizer_type, volume_liters, volume_gallons, clean_filter_psi, current_filter_psi, filter_type, pump_hp, daily_run_hours, service_day, service_frequency, target_params, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO pools (id, name, customer_name, customer_phone, customer_email, address, latitude, longitude, gate_code, pool_type, surface_type, sanitizer_type, volume_liters, volume_gallons, clean_filter_psi, current_filter_psi, filter_type, pump_hp, daily_run_hours, service_day, service_frequency, target_params, tenant_id, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         "pool-3",
         "Craig Ranch Resort Clubhouse Pool",
@@ -265,7 +285,7 @@ def seed_pools_data(cursor):
         "6150 Collin McKinney Pkwy, McKinney, TX 75070",
         33.1550,
         -96.7200,
-        "Doca de Serviço #10",
+        "MOCK-DOCK-#3003",
         "Comercial / Condomínio (HOA)",
         "Diamond Brite / Quartz",
         "Cloro Líquido + Ozônio",
@@ -279,6 +299,7 @@ def seed_pools_data(cursor):
         "Segunda-feira",
         "Semanal",
         target_3,
+        DEFAULT_TENANT_ID,
         now
     ))
 
@@ -287,8 +308,8 @@ def seed_pools_data(cursor):
         "target_ph": 7.4, "target_fc": 3.0, "target_ta": 90.0, "target_ch": 250.0, "target_cya": 40.0, "target_salt": 0.0
     })
     cursor.execute("""
-    INSERT OR REPLACE INTO pools (id, name, customer_name, customer_phone, customer_email, address, latitude, longitude, gate_code, pool_type, surface_type, sanitizer_type, volume_liters, volume_gallons, clean_filter_psi, current_filter_psi, filter_type, pump_hp, daily_run_hours, service_day, service_frequency, target_params, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO pools (id, name, customer_name, customer_phone, customer_email, address, latitude, longitude, gate_code, pool_type, surface_type, sanitizer_type, volume_liters, volume_gallons, clean_filter_psi, current_filter_psi, filter_type, pump_hp, daily_run_hours, service_day, service_frequency, target_params, tenant_id, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         "pool-4",
         "Sterling Manor & Heated Spa",
@@ -298,7 +319,7 @@ def seed_pools_data(cursor):
         "1280 Southlake Blvd, Southlake, TX 76092",
         32.9412,
         -97.1340,
-        "Código Portão *7720",
+        "MOCK-CODE-#4004",
         "Residencial",
         "Alvenaria / Revestimento Quartzo",
         "Cloro Tradicional + Ozônio",
@@ -312,6 +333,7 @@ def seed_pools_data(cursor):
         "Segunda-feira",
         "Semanal",
         target_4,
+        DEFAULT_TENANT_ID,
         now
     ))
 
@@ -320,8 +342,8 @@ def seed_pools_data(cursor):
         "target_ph": 7.5, "target_fc": 3.5, "target_ta": 90.0, "target_ch": 280.0, "target_cya": 70.0, "target_salt": 3200.0
     })
     cursor.execute("""
-    INSERT OR REPLACE INTO pools (id, name, customer_name, customer_phone, customer_email, address, latitude, longitude, gate_code, pool_type, surface_type, sanitizer_type, volume_liters, volume_gallons, clean_filter_psi, current_filter_psi, filter_type, pump_hp, daily_run_hours, service_day, service_frequency, target_params, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO pools (id, name, customer_name, customer_phone, customer_email, address, latitude, longitude, gate_code, pool_type, surface_type, sanitizer_type, volume_liters, volume_gallons, clean_filter_psi, current_filter_psi, filter_type, pump_hp, daily_run_hours, service_day, service_frequency, target_params, tenant_id, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         "pool-5",
         "Willow Bend Luxury Oasis & Cascata",
@@ -331,7 +353,7 @@ def seed_pools_data(cursor):
         "2804 Willow Bend Dr, Plano, TX 75093",
         33.0368,
         -96.8122,
-        "Portão Lateral #9012",
+        "MOCK-SIDE-GATE-#5005",
         "Residencial",
         "PebbleTec Azul Cobalto",
         "Gerador de Sal (SWG)",
@@ -345,6 +367,7 @@ def seed_pools_data(cursor):
         "Segunda-feira",
         "Semanal",
         target_5,
+        DEFAULT_TENANT_ID,
         now
     ))
 
@@ -354,47 +377,35 @@ def seed_routes_data(cursor):
 
     # 1. Cadastro dos Técnicos / Funcionários
     technicians_data = [
-        ("tech-1", "Tyler Brooks (DFW Senior Pool Tech)", "(214) 555-7890", "tyler@wandpool.com", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80", "Senior Tech (Frisco & Plano)", now),
-        ("tech-2", "Marcus Rodriguez (North DFW Tech)", "(469) 555-3211", "marcus@wandpool.com", "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80", "Route Tech (McKinney & Allen)", now),
-        ("tech-3", "Jake Wilson (Dallas Tech)", "(214) 555-6543", "jake@wandpool.com", "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80", "Route Tech (Highland Park & Dallas)", now),
-        ("tech-4", "Sarah Jenkins (West DFW Tech)", "(817) 555-9012", "sarah@wandpool.com", "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80", "Route Tech (Southlake & Fort Worth)", now),
+        ("tech-1", "Tyler Brooks (DFW Senior Pool Tech)", "(214) 555-7890", "tyler@wandpool.com", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80", "Senior Tech (Frisco & Plano)", DEFAULT_TENANT_ID, now),
+        ("tech-2", "Marcus Rodriguez (North DFW Tech)", "(469) 555-3211", "marcus@wandpool.com", "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80", "Route Tech (McKinney & Allen)", DEFAULT_TENANT_ID, now),
+        ("tech-3", "Jake Wilson (Dallas Tech)", "(214) 555-6543", "jake@wandpool.com", "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80", "Route Tech (Highland Park & Dallas)", DEFAULT_TENANT_ID, now),
+        ("tech-4", "Sarah Jenkins (West DFW Tech)", "(817) 555-9012", "sarah@wandpool.com", "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80", "Route Tech (Southlake & Fort Worth)", DEFAULT_TENANT_ID, now),
     ]
 
     for t in technicians_data:
         cursor.execute("""
-        INSERT OR REPLACE INTO technicians (id, name, phone, email, avatar_url, role, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO technicians (id, name, phone, email, avatar_url, role, tenant_id, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, t)
 
     # 2. Rotas por Técnico
-    # Rota 1: Tyler Brooks (Segunda-feira)
     route_tyler = "route-tyler-segunda"
     cursor.execute("""
-    INSERT OR REPLACE INTO routes (id, technician_id, technician_name, technician_phone, day_of_week, date, total_stops, completed_stops, total_distance_km, estimated_travel_time_min, status, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO routes (id, technician_id, technician_name, technician_phone, day_of_week, date, total_stops, completed_stops, total_distance_km, estimated_travel_time_min, status, tenant_id, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         route_tyler, "tech-1", "Tyler Brooks (DFW Senior Pool Tech)", "(214) 555-7890",
-        "Segunda-feira", today_str, 3, 1, 18.4, 38, "Em Andamento", now
+        "Segunda-feira", today_str, 3, 1, 18.4, 38, "Em Andamento", DEFAULT_TENANT_ID, now
     ))
 
-    # Rota 2: Marcus Rodriguez (Segunda-feira)
     route_marcus = "route-marcus-segunda"
     cursor.execute("""
-    INSERT OR REPLACE INTO routes (id, technician_id, technician_name, technician_phone, day_of_week, date, total_stops, completed_stops, total_distance_km, estimated_travel_time_min, status, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO routes (id, technician_id, technician_name, technician_phone, day_of_week, date, total_stops, completed_stops, total_distance_km, estimated_travel_time_min, status, tenant_id, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         route_marcus, "tech-2", "Marcus Rodriguez (North DFW Tech)", "(469) 555-3211",
-        "Segunda-feira", today_str, 2, 0, 14.2, 28, "Planejada", now
-    ))
-
-    # Rota 3: Jake Wilson (Terça-feira)
-    route_jake = "route-jake-terca"
-    cursor.execute("""
-    INSERT OR REPLACE INTO routes (id, technician_id, technician_name, technician_phone, day_of_week, date, total_stops, completed_stops, total_distance_km, estimated_travel_time_min, status, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        route_jake, "tech-3", "Jake Wilson (Dallas Tech)", "(214) 555-6543",
-        "Terça-feira", today_str, 2, 0, 16.8, 32, "Planejada", now
+        "Segunda-feira", today_str, 2, 0, 14.2, 28, "Planejada", DEFAULT_TENANT_ID, now
     ))
 
     # Fotos de Exemplo
@@ -403,192 +414,60 @@ def seed_routes_data(cursor):
           "id": "photo-1",
           "photo_type": "before",
           "url": "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=600&auto=format&fit=crop&q=80",
-          "caption": "Estado Inicial: Água com folhas e turbidez pós-vento do Texas",
+          "caption": "Estado Inicial: Água com folhas e turbidez",
           "timestamp": now
         },
         {
           "id": "photo-2",
           "photo_type": "after",
           "url": "https://images.unsplash.com/photo-1562778612-e1e0cda9915c?w=600&auto=format&fit=crop&q=80",
-          "caption": "Finalização: Água 100% cristalina, sal balanceado e bordas limpas",
-          "timestamp": now
-        },
-        {
-          "id": "photo-3",
-          "photo_type": "equipment",
-          "url": "https://images.unsplash.com/photo-1584467735815-f778f274e296?w=600&auto=format&fit=crop&q=80",
-          "caption": "Manômetro em 18.5 PSI (Alerta de limpeza do cartucho)",
+          "caption": "Finalização: Água 100% cristalina e sal balanceado",
           "timestamp": now
         }
     ])
 
-    # Paradas do Tyler (Rota 1)
     stops_tyler = [
-        ("stop-1", route_tyler, "pool-1", "Stonebriar Creek Residence", "David & Sarah Harrison", "(214) 555-0142", "5420 Stonebriar Dr, Frisco, TX", 33.1250, -96.8250, 1, "08:00", 45, "Concluído", now, photos_stop1, "pH 7.8 | Cloro 1.2 ppm | TA 120", "500ml Redutor pH + 300g Dicloro"),
-        ("stop-2", route_tyler, "pool-5", "Willow Bend Luxury Oasis", "Robert & Elena Chen", "(972) 555-0164", "2804 Willow Bend Dr, Plano, TX", 33.0368, -96.8122, 2, "09:15", 45, "A Caminho", None, "[]", "Aguardando medição", "Aguardando medição"),
-        ("stop-3", route_tyler, "pool-2", "Highland Park Club & Lap Pool", "Highland Park Estates HOA", "(214) 555-0188", "4200 Armstrong Pkwy, Highland Park, TX", 32.8335, -96.8010, 3, "11:00", 75, "Pendente", None, "[]", "Aguardando medição", "Aguardando medição"),
+        ("stop-1", route_tyler, "pool-1", "Stonebriar Creek Residence", "David & Sarah Harrison", "(214) 555-0142", "5420 Stonebriar Dr, Frisco, TX", 33.1250, -96.8250, 1, "08:00", 45, "Concluído", now, photos_stop1, "pH 7.8 | Cloro 1.2 ppm | TA 120", "500ml Redutor pH + 300g Dicloro", DEFAULT_TENANT_ID),
+        ("stop-2", route_tyler, "pool-5", "Willow Bend Luxury Oasis", "Robert & Elena Chen", "(972) 555-0164", "2804 Willow Bend Dr, Plano, TX", 33.0368, -96.8122, 2, "09:15", 45, "A Caminho", None, "[]", "Aguardando medição", "Aguardando medição", DEFAULT_TENANT_ID),
+        ("stop-3", route_tyler, "pool-2", "Highland Park Club & Lap Pool", "Highland Park Estates HOA", "(214) 555-0188", "4200 Armstrong Pkwy, Highland Park, TX", 32.8335, -96.8010, 3, "11:00", 75, "Pendente", None, "[]", "Aguardando medição", "Aguardando medição", DEFAULT_TENANT_ID),
     ]
 
     for s in stops_tyler:
         cursor.execute("""
-        INSERT OR REPLACE INTO route_stops (stop_id, route_id, pool_id, pool_name, customer_name, customer_phone, address, latitude, longitude, order_index, scheduled_time, estimated_duration_min, status, completed_at, photos_json, water_test_summary, chemicals_summary)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO route_stops (stop_id, route_id, pool_id, pool_name, customer_name, customer_phone, address, latitude, longitude, order_index, scheduled_time, estimated_duration_min, status, completed_at, photos_json, water_test_summary, chemicals_summary, tenant_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, s)
 
-    # Paradas do Marcus (Rota 2)
-    stops_marcus = [
-        ("stop-4", route_marcus, "pool-3", "Craig Ranch Resort Clubhouse", "Craig Ranch Townhomes HOA", "(469) 555-0177", "6150 Collin McKinney Pkwy, McKinney, TX", 33.1550, -96.7200, 1, "08:30", 60, "Pendente", None, "[]", "Aguardando medição", "Aguardando medição"),
-        ("stop-5", route_marcus, "pool-4", "Sterling Manor & Heated Spa", "Dr. Michael & Amanda Sterling", "(817) 555-0198", "1280 Southlake Blvd, Southlake, TX", 32.9412, -97.1340, 2, "10:15", 50, "Pendente", None, "[]", "Aguardando medição", "Aguardando medição"),
-    ]
+# ==========================================
+# FUNÇÕES DE CONSULTA E MUTATION PROTEGIDAS
+# ==========================================
 
-    for s in stops_marcus:
-        cursor.execute("""
-        INSERT OR REPLACE INTO route_stops (stop_id, route_id, pool_id, pool_name, customer_name, customer_phone, address, latitude, longitude, order_index, scheduled_time, estimated_duration_min, status, completed_at, photos_json, water_test_summary, chemicals_summary)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, s)
-
-    # Paradas do Jake (Rota 3)
-    stops_jake = [
-        ("stop-6", route_jake, "pool-2", "Highland Park Club & Lap Pool", "Highland Park Estates HOA", "(214) 555-0188", "4200 Armstrong Pkwy, Highland Park, TX", 32.8335, -96.8010, 1, "09:00", 60, "Pendente", None, "[]", "Aguardando medição", "Aguardando medição"),
-        ("stop-7", route_jake, "pool-1", "Stonebriar Creek Residence", "David & Sarah Harrison", "(214) 555-0142", "5420 Stonebriar Dr, Frisco, TX", 33.1250, -96.8250, 2, "10:45", 45, "Pendente", None, "[]", "Aguardando medição", "Aguardando medição"),
-    ]
-
-    for s in stops_jake:
-        cursor.execute("""
-        INSERT OR REPLACE INTO route_stops (stop_id, route_id, pool_id, pool_name, customer_name, customer_phone, address, latitude, longitude, order_index, scheduled_time, estimated_duration_min, status, completed_at, photos_json, water_test_summary, chemicals_summary)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, s)
-
-    # Testes Químicos e Histórico de Visitas Passadas (Multi-semanas)
-    from datetime import timedelta
-    dt_now = datetime.now()
-    dt_7d = dt_now - timedelta(days=7)
-    dt_14d = dt_now - timedelta(days=14)
-    dt_21d = dt_now - timedelta(days=21)
-
-    # Testes pool-1 (Stonebriar Creek)
-    tests_pool1 = [
-        ("test-1-today", "pool-1", dt_now.isoformat(), 7.8, 1.2, 0.4, 120.0, 240.0, 35.0, 3100.0, 27.0, "Levemente Turva", 0.35, "Incrustante / Saturada", "Filtro com pressão de 18.5 PSI. Aplicado redutor de pH e choque de dicloro."),
-        ("test-1-7d", "pool-1", dt_7d.isoformat(), 7.5, 3.5, 0.1, 90.0, 250.0, 35.0, 3200.0, 28.0, "Cristalina", 0.05, "Equilibrada (Ideal)", "Piscina em equilíbrio perfeito. Água 100% transparente."),
-        ("test-1-14d", "pool-1", dt_14d.isoformat(), 7.3, 2.8, 0.2, 85.0, 245.0, 30.0, 3050.0, 26.5, "Cristalina", -0.15, "Equilibrada (Ideal)", "Adicionado 1 saco de sal (40 lbs) para elevar SWG.")
-    ]
-    for t in tests_pool1:
-        cursor.execute("""
-        INSERT OR REPLACE INTO water_tests (id, pool_id, timestamp, ph, free_chlorine, combined_chlorine, total_alkalinity, calcium_hardness, cyanuric_acid, salt_ppm, temperature_c, turbidity, lsi_score, lsi_status, technician_notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, t)
-
-    # Visitas pool-1 (Stonebriar Creek)
-    checklist_full = json.dumps([
-        {"id": "c1", "task_name": "Escovação completa de paredes, degraus e spa", "category": "Limpeza Física", "completed": True},
-        {"id": "c2", "task_name": "Aspiração de fundo e recolhimento de detritos", "category": "Limpeza Física", "completed": True},
-        {"id": "c3", "task_name": "Limpeza de linha d'água e azulejos decorativos", "category": "Limpeza Física", "completed": True},
-        {"id": "c4", "task_name": "Limpeza dos cestos do skimmer e pré-filtro da bomba", "category": "Casa de Máquinas", "completed": True},
-        {"id": "c5", "task_name": "Inspeção da célula geradora de sal (SWG) e manômetro", "category": "Casa de Máquinas", "completed": True},
-        {"id": "c6", "task_name": "Registro fotográfico (Antes / Depois / Equipamento)", "category": "Evidência & Fotos", "completed": True},
-        {"id": "c7", "task_name": "Aplicação de balanceador de pH e sanitização", "category": "Química & Tratamento", "completed": True}
-    ])
-
-    visits_pool1 = [
-        (
-            "visit-1", "pool-1", dt_now.isoformat(), "Tyler Brooks (DFW Senior Pool Tech)",
-            18.5, 0, "test-1-today", checklist_full,
-            json.dumps([
-                {"chemical_name": "Redutor de pH (Muriatic Acid 31.45%)", "amount": 16, "unit": "fl oz", "reason": "Reduzir pH de 7.8 para 7.4"},
-                {"chemical_name": "Dicloro Granulado 56%", "amount": 12, "unit": "oz", "reason": "Elevar Cloro Livre para 3.5 ppm"}
-            ]),
-            photos_stop1,
-            "Pressão do filtro em 18.5 PSI (+6.5 PSI acima do baseline). Fotos de Antes/Depois registradas.",
-            "Hello Harrison Family! Realizamos a manutenção completa da piscina Stonebriar Creek hoje. Fotos de Antes e Depois anexadas. Água liberada para banho às 17h.",
-            "Concluído", 1, 1
-        ),
-        (
-            "visit-1-7d", "pool-1", dt_7d.isoformat(), "Tyler Brooks (DFW Senior Pool Tech)",
-            13.0, 1, "test-1-7d", checklist_full,
-            json.dumps([
-                {"chemical_name": "Cloro Líquido 12.5% (Sodium Hypo)", "amount": 32, "unit": "fl oz", "reason": "Manutenção preventiva semanal"},
-                {"chemical_name": "Clarificante Concentrado", "amount": 4, "unit": "fl oz", "reason": "Polimento de brilho da água"}
-            ]),
-            json.dumps([
-                {"id": "p-past-1", "photo_type": "after", "url": "https://images.unsplash.com/photo-1562778612-e1e0cda9915c?w=600&auto=format&fit=crop&q=80", "caption": "Água cristalina pós-retrolavagem", "timestamp": dt_7d.isoformat()}
-            ]),
-            "Realizada retrolavagem (Backwash) do filtro. Pressão voltou ao ideal de 13 PSI.",
-            "Manutenção de rotina realizada. Realizamos retrolavagem do filtro de areia e cloração de reforço.",
-            "Concluído", 1, 1
-        ),
-        (
-            "visit-1-14d", "pool-1", dt_14d.isoformat(), "Marcus Rodriguez (North DFW Tech)",
-            12.0, 0, "test-1-14d", checklist_full,
-            json.dumps([
-                {"chemical_name": "Sal Especial SWG Granulado", "amount": 1, "unit": "sacos 40 lbs", "reason": "Elevar sal para 3200 ppm no gerador"},
-                {"chemical_name": "Muriatic Acid 31.45%", "amount": 8, "unit": "fl oz", "reason": "Ajuste fino de pH"}
-            ]),
-            "[]",
-            "Adicionado 1 saco de sal para reposição pós-chuva.",
-            "Visita semanal concluída: sal adicionado e aspiração de folhas executada com sucesso.",
-            "Concluído", 1, 1
-        )
-    ]
-
-    for v in visits_pool1:
-        cursor.execute("""
-        INSERT OR REPLACE INTO service_visits (id, pool_id, visit_date, technician_name, filter_pressure_psi, backwash_performed, water_test_id, checklist_json, chemicals_json, photos_json, technician_notes, customer_summary, status, door_hanger_sent, whatsapp_dispatched)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, v)
-
-    # Visitas pool-5 (Willow Bend)
-    cursor.execute("""
-    INSERT OR REPLACE INTO service_visits (id, pool_id, visit_date, technician_name, filter_pressure_psi, backwash_performed, water_test_id, checklist_json, chemicals_json, photos_json, technician_notes, customer_summary, status, door_hanger_sent, whatsapp_dispatched)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        "visit-5-7d", "pool-5", dt_7d.isoformat(), "Tyler Brooks (DFW Senior Pool Tech)",
-        11.0, 0, None, checklist_full,
-        json.dumps([
-            {"chemical_name": "Bicarbonato de Sódio (Alkalinity Up)", "amount": 2, "unit": "lbs", "reason": "Aumentar TA de 70 para 90 ppm"},
-            {"chemical_name": "Algicida Poly 60", "amount": 6, "unit": "fl oz", "reason": "Prevenção pós-calor intenso"}
-        ]),
-        "[]",
-        "Cascata e spa limpos. Filtro de cartucho em perfeito estado (11 PSI).",
-        "Hello Chen Family! Limpeza completa e dosagem preventiva de algicida realizadas hoje.",
-        "Concluído", 1, 1
-    ))
-
-    # Visitas pool-2 (Highland Park)
-    cursor.execute("""
-    INSERT OR REPLACE INTO service_visits (id, pool_id, visit_date, technician_name, filter_pressure_psi, backwash_performed, water_test_id, checklist_json, chemicals_json, photos_json, technician_notes, customer_summary, status, door_hanger_sent, whatsapp_dispatched)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        "visit-2-7d", "pool-2", dt_7d.isoformat(), "Jake Wilson (Dallas Tech)",
-        15.0, 1, None, checklist_full,
-        json.dumps([
-            {"chemical_name": "Hipoclorito de Cálcio 65% (Cal-Hypo)", "amount": 3, "unit": "lbs", "reason": "Supercloração de choque (Lap Pool)"},
-            {"chemical_name": "Muriatic Acid 31.45%", "amount": 32, "unit": "fl oz", "reason": "Reduzir pH pós-choque"}
-        ]),
-        "[]",
-        "Piscina semiolímpica com alta demanda de nado. Realizado choque com 3 lbs Cal-Hypo.",
-        "Relatório Highland Park HOA: Manutenção da piscina principal e lap pool finalizada com sucesso.",
-        "Concluído", 1, 1
-    ))
-
-# Helper Functions
-def get_all_pools() -> List[Dict[str, Any]]:
+def get_all_pools(tenant_id: str = DEFAULT_TENANT_ID, mask_gate_code: bool = True) -> List[Dict[str, Any]]:
+    """Retorna todas as piscinas pertencentes ao tenant informado."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM pools ORDER BY name ASC")
+    cursor.execute("SELECT * FROM pools WHERE tenant_id = ? ORDER BY name ASC", (tenant_id,))
     rows = cursor.fetchall()
     result = []
     for r in rows:
         d = dict(r)
         if d.get("target_params"):
             d["target_params"] = json.loads(d["target_params"])
+        if mask_gate_code and d.get("gate_code"):
+            # Mascara código de portão em listagem geral
+            d["gate_code"] = "🔒 [Acesso Restrito ao Técnico]"
         result.append(d)
     conn.close()
     return result
 
-def get_pool_by_id(pool_id: str) -> Optional[Dict[str, Any]]:
+def get_pool_by_id(pool_id: str, tenant_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Retorna detalhes da piscina validando o isolamento de tenant."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM pools WHERE id = ?", (pool_id,))
+    if tenant_id:
+        cursor.execute("SELECT * FROM pools WHERE id = ? AND tenant_id = ?", (pool_id, tenant_id))
+    else:
+        cursor.execute("SELECT * FROM pools WHERE id = ?", (pool_id,))
     row = cursor.fetchone()
     if not row:
         conn.close()
@@ -599,180 +478,19 @@ def get_pool_by_id(pool_id: str) -> Optional[Dict[str, Any]]:
     conn.close()
     return d
 
-def get_routes() -> List[Dict[str, Any]]:
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM routes ORDER BY date DESC")
-    route_rows = cursor.fetchall()
-    routes = []
-    for r in route_rows:
-        rd = dict(r)
-        # Buscar paradas da rota
-        cursor.execute("SELECT * FROM route_stops WHERE route_id = ? ORDER BY order_index ASC", (rd["id"],))
-        stops_rows = cursor.fetchall()
-        stops = []
-        for s in stops_rows:
-            sd = dict(s)
-            sd["photos"] = json.loads(sd.get("photos_json") or "[]")
-            stops.append(sd)
-        rd["stops"] = stops
-        routes.append(rd)
-    conn.close()
-    return routes
-
-def get_route_by_id(route_id: str) -> Optional[Dict[str, Any]]:
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM routes WHERE id = ?", (route_id,))
-    row = cursor.fetchone()
-    if not row:
-        conn.close()
-        return None
-    rd = dict(row)
-    cursor.execute("SELECT * FROM route_stops WHERE route_id = ? ORDER BY order_index ASC", (route_id,))
-    stops_rows = cursor.fetchall()
-    stops = []
-    for s in stops_rows:
-        sd = dict(s)
-        sd["photos"] = json.loads(sd.get("photos_json") or "[]")
-        stops.append(sd)
-    rd["stops"] = stops
-    conn.close()
-    return rd
-
-def optimize_route_path(route_id: str, start_lat: float = 32.7767, start_lng: float = -96.7970) -> Dict[str, Any]:
-    """
-    Algoritmo de Otimização de Rota (Nearest Neighbor TSP / Haversine)
-    Calcula a melhor ordem geográfica de paradas para minimizar tempo e combustível.
-    """
-    route = get_route_by_id(route_id)
-    if not route:
-        return {"error": "Rota não encontrada"}
-
-    stops = route["stops"]
-    if not stops:
-        return route
-
-    def haversine_distance(lat1, lon1, lat2, lon2):
-        # Raio da Terra em Milhas (US Miles)
-        R = 3958.8
-        dlat = math.radians(lat2 - lat1)
-        dlon = math.radians(lon2 - lon1)
-        a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-        return R * c
-
-    unvisited = list(stops)
-    optimized_stops = []
-    current_lat = start_lat
-    current_lng = start_lng
-    total_miles = 0.0
-
-    while unvisited:
-        # Encontra a parada mais próxima
-        nearest_idx = 0
-        min_dist = float('inf')
-        for idx, stop in enumerate(unvisited):
-            dist = haversine_distance(current_lat, current_lng, stop["latitude"], stop["longitude"])
-            if dist < min_dist:
-                min_dist = dist
-                nearest_idx = idx
-
-        next_stop = unvisited.pop(nearest_idx)
-        total_miles += min_dist
-        current_lat = next_stop["latitude"]
-        current_lng = next_stop["longitude"]
-        optimized_stops.append(next_stop)
-
-    # Atualizar índices de ordem no SQLite
-    conn = get_connection()
-    cursor = conn.cursor()
-    base_time_hours = 8 # Inicia às 08:00
-    base_time_mins = 0
-
-    for idx, stop in enumerate(optimized_stops):
-        order = idx + 1
-        # Calcula horário estimado (média 55 min por atendimento)
-        hours = base_time_hours + ((base_time_mins + (idx * 55)) // 60)
-        mins = (base_time_mins + (idx * 55)) % 60
-        sched_time = f"{hours:02d}:{mins:02d}"
-        
-        stop["order_index"] = order
-        stop["scheduled_time"] = sched_time
-        cursor.execute("UPDATE route_stops SET order_index = ?, scheduled_time = ? WHERE stop_id = ?", (order, sched_time, stop["stop_id"]))
-
-    total_miles_rounded = round(total_miles, 1)
-    estimated_mins = int(total_miles * 2.8) # ~2.8 min por milha no tráfego urbano de DFW
-    cursor.execute("UPDATE routes SET total_distance_km = ?, estimated_travel_time_min = ? WHERE id = ?", (total_miles_rounded, estimated_mins, route_id))
-    conn.commit()
-    conn.close()
-
-    route["stops"] = optimized_stops
-    route["total_distance_km"] = total_miles_rounded
-    route["estimated_travel_time_min"] = estimated_mins
-    return route
-
-def update_stop_photos_and_status(stop_id: str, status: str, photos: List[Dict[str, Any]]) -> bool:
-    conn = get_connection()
-    cursor = conn.cursor()
-    photos_json = json.dumps(photos)
-    now = datetime.now().isoformat() if status == "Concluído" else None
-    cursor.execute("""
-    UPDATE route_stops
-    SET status = ?, photos_json = ?, completed_at = COALESCE(?, completed_at)
-    WHERE stop_id = ?
-    """, (status, photos_json, now, stop_id))
-    
-    # Atualiza contagem de paradas concluídas na rota
-    cursor.execute("""
-    UPDATE routes SET completed_stops = (
-        SELECT COUNT(*) FROM route_stops WHERE route_id = (SELECT route_id FROM route_stops WHERE stop_id = ?) AND status = 'Concluído'
-    ) WHERE id = (SELECT route_id FROM route_stops WHERE stop_id = ?)
-    """, (stop_id, stop_id))
-
-    conn.commit()
-    conn.close()
-    return True
-
-def get_pool_tests(pool_id: str) -> List[Dict[str, Any]]:
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM water_tests WHERE pool_id = ? ORDER BY timestamp DESC", (pool_id,))
-    rows = cursor.fetchall()
-    result = [dict(r) for r in rows]
-    conn.close()
-    return result
-
-def get_pool_visits(pool_id: str) -> List[Dict[str, Any]]:
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM service_visits WHERE pool_id = ? ORDER BY visit_date DESC", (pool_id,))
-    rows = cursor.fetchall()
-    result = []
-    for r in rows:
-        d = dict(r)
-        if d.get("checklist_json"):
-            d["checklist_completed"] = json.loads(d["checklist_json"])
-        if d.get("chemicals_json"):
-            d["chemicals_added"] = json.loads(d["chemicals_json"])
-        if d.get("photos_json"):
-            d["photos"] = json.loads(d["photos_json"])
-        result.append(d)
-    conn.close()
-    return result
-
-def save_pool_in_db(pool_data: Dict[str, Any]) -> Dict[str, Any]:
+def save_pool_in_db(pool_data: Dict[str, Any], tenant_id: str = DEFAULT_TENANT_ID) -> Dict[str, Any]:
     conn = get_connection()
     cursor = conn.cursor()
     target_json = json.dumps(pool_data.get("target_params") or {})
+    pool_tenant = pool_data.get("tenant_id") or tenant_id
     
     cursor.execute("""
     INSERT OR REPLACE INTO pools (
         id, name, customer_name, customer_phone, customer_email, address, latitude, longitude,
         gate_code, pool_type, surface_type, sanitizer_type, volume_liters, volume_gallons,
         clean_filter_psi, current_filter_psi, filter_type, pump_hp, daily_run_hours,
-        service_day, service_frequency, target_params, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        service_day, service_frequency, target_params, tenant_id, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         pool_data.get("id"),
         pool_data.get("name"),
@@ -796,33 +514,198 @@ def save_pool_in_db(pool_data: Dict[str, Any]) -> Dict[str, Any]:
         pool_data.get("service_day", "Segunda-feira"),
         pool_data.get("service_frequency", "Semanal"),
         target_json,
+        pool_tenant,
         pool_data.get("created_at") or datetime.now().isoformat()
     ))
     conn.commit()
     conn.close()
     return pool_data
 
-def update_pool_in_db(pool_id: str, pool_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    existing = get_pool_by_id(pool_id)
+def update_pool_in_db(pool_id: str, pool_data: Dict[str, Any], tenant_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Anti-IDOR: Valida a posse do registro antes de atualizar."""
+    existing = get_pool_by_id(pool_id, tenant_id=tenant_id)
     if not existing:
         return None
-    merged = {**existing, **pool_data, "id": pool_id}
-    return save_pool_in_db(merged)
+    merged = {**existing, **pool_data, "id": pool_id, "tenant_id": existing.get("tenant_id", DEFAULT_TENANT_ID)}
+    return save_pool_in_db(merged, tenant_id=merged["tenant_id"])
 
-# ==========================================
-# GESTÃO DE TÉCNICOS & ROTAS POR FUNCIONÁRIO
-# ==========================================
-
-def get_all_technicians() -> List[Dict[str, Any]]:
+def get_routes(tenant_id: str = DEFAULT_TENANT_ID) -> List[Dict[str, Any]]:
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM technicians ORDER BY name ASC")
+    cursor.execute("SELECT * FROM routes WHERE tenant_id = ? ORDER BY date DESC", (tenant_id,))
+    route_rows = cursor.fetchall()
+    routes = []
+    for r in route_rows:
+        rd = dict(r)
+        cursor.execute("SELECT * FROM route_stops WHERE route_id = ? AND tenant_id = ? ORDER BY order_index ASC", (rd["id"], tenant_id))
+        stops_rows = cursor.fetchall()
+        stops = []
+        for s in stops_rows:
+            sd = dict(s)
+            sd["photos"] = json.loads(sd.get("photos_json") or "[]")
+            stops.append(sd)
+        rd["stops"] = stops
+        routes.append(rd)
+    conn.close()
+    return routes
+
+def get_route_by_id(route_id: str, tenant_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    if tenant_id:
+        cursor.execute("SELECT * FROM routes WHERE id = ? AND tenant_id = ?", (route_id, tenant_id))
+    else:
+        cursor.execute("SELECT * FROM routes WHERE id = ?", (route_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return None
+    rd = dict(row)
+    cursor.execute("SELECT * FROM route_stops WHERE route_id = ? ORDER BY order_index ASC", (route_id,))
+    stops_rows = cursor.fetchall()
+    stops = []
+    for s in stops_rows:
+        sd = dict(s)
+        sd["photos"] = json.loads(sd.get("photos_json") or "[]")
+        stops.append(sd)
+    rd["stops"] = stops
+    conn.close()
+    return rd
+
+def optimize_route_path(route_id: str, start_lat: float = 32.7767, start_lng: float = -96.7970, tenant_id: Optional[str] = None) -> Dict[str, Any]:
+    route = get_route_by_id(route_id, tenant_id=tenant_id)
+    if not route:
+        return {"error": "Rota não encontrada"}
+
+    stops = route["stops"]
+    if not stops:
+        return route
+
+    def haversine_distance(lat1, lon1, lat2, lon2):
+        R = 3958.8
+        dlat = math.radians(lat2 - lat1)
+        dlon = math.radians(lon2 - lon1)
+        a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return R * c
+
+    unvisited = list(stops)
+    optimized_stops = []
+    current_lat = start_lat
+    current_lng = start_lng
+    total_miles = 0.0
+
+    while unvisited:
+        nearest_idx = 0
+        min_dist = float('inf')
+        for idx, stop in enumerate(unvisited):
+            dist = haversine_distance(current_lat, current_lng, stop["latitude"], stop["longitude"])
+            if dist < min_dist:
+                min_dist = dist
+                nearest_idx = idx
+
+        next_stop = unvisited.pop(nearest_idx)
+        total_miles += min_dist
+        current_lat = next_stop["latitude"]
+        current_lng = next_stop["longitude"]
+        optimized_stops.append(next_stop)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    base_time_hours = 8
+    base_time_mins = 0
+
+    for idx, stop in enumerate(optimized_stops):
+        order = idx + 1
+        hours = base_time_hours + ((base_time_mins + (idx * 55)) // 60)
+        mins = (base_time_mins + (idx * 55)) % 60
+        sched_time = f"{hours:02d}:{mins:02d}"
+        
+        stop["order_index"] = order
+        stop["scheduled_time"] = sched_time
+        cursor.execute("UPDATE route_stops SET order_index = ?, scheduled_time = ? WHERE stop_id = ?", (order, sched_time, stop["stop_id"]))
+
+    total_miles_rounded = round(total_miles, 1)
+    estimated_mins = int(total_miles * 2.8)
+    cursor.execute("UPDATE routes SET total_distance_km = ?, estimated_travel_time_min = ? WHERE id = ?", (total_miles_rounded, estimated_mins, route_id))
+    conn.commit()
+    conn.close()
+
+    route["stops"] = optimized_stops
+    route["total_distance_km"] = total_miles_rounded
+    route["estimated_travel_time_min"] = estimated_mins
+    return route
+
+def update_stop_photos_and_status(stop_id: str, status: str, photos: List[Dict[str, Any]], tenant_id: Optional[str] = None) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    if tenant_id:
+        cursor.execute("SELECT stop_id FROM route_stops WHERE stop_id = ? AND tenant_id = ?", (stop_id, tenant_id))
+        if not cursor.fetchone():
+            conn.close()
+            return False
+
+    photos_json = json.dumps(photos)
+    now = datetime.now().isoformat() if status == "Concluído" else None
+    cursor.execute("""
+    UPDATE route_stops
+    SET status = ?, photos_json = ?, completed_at = COALESCE(?, completed_at)
+    WHERE stop_id = ?
+    """, (status, photos_json, now, stop_id))
+    
+    cursor.execute("""
+    UPDATE routes SET completed_stops = (
+        SELECT COUNT(*) FROM route_stops WHERE route_id = (SELECT route_id FROM route_stops WHERE stop_id = ?) AND status = 'Concluído'
+    ) WHERE id = (SELECT route_id FROM route_stops WHERE stop_id = ?)
+    """, (stop_id, stop_id))
+
+    conn.commit()
+    conn.close()
+    return True
+
+def get_pool_tests(pool_id: str, tenant_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    if tenant_id:
+        cursor.execute("SELECT * FROM water_tests WHERE pool_id = ? AND tenant_id = ? ORDER BY timestamp DESC", (pool_id, tenant_id))
+    else:
+        cursor.execute("SELECT * FROM water_tests WHERE pool_id = ? ORDER BY timestamp DESC", (pool_id,))
+    rows = cursor.fetchall()
+    result = [dict(r) for r in rows]
+    conn.close()
+    return result
+
+def get_pool_visits(pool_id: str, tenant_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    if tenant_id:
+        cursor.execute("SELECT * FROM service_visits WHERE pool_id = ? AND tenant_id = ? ORDER BY visit_date DESC", (pool_id, tenant_id))
+    else:
+        cursor.execute("SELECT * FROM service_visits WHERE pool_id = ? ORDER BY visit_date DESC", (pool_id,))
+    rows = cursor.fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        if d.get("checklist_json"):
+            d["checklist_completed"] = json.loads(d["checklist_json"])
+        if d.get("chemicals_json"):
+            d["chemicals_added"] = json.loads(d["chemicals_json"])
+        if d.get("photos_json"):
+            d["photos"] = json.loads(d["photos_json"])
+        result.append(d)
+    conn.close()
+    return result
+
+def get_all_technicians(tenant_id: str = DEFAULT_TENANT_ID) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM technicians WHERE tenant_id = ? ORDER BY name ASC", (tenant_id,))
     tech_rows = cursor.fetchall()
     technicians = []
     for t in tech_rows:
         td = dict(t)
-        # Conta rotas atribuídas
-        cursor.execute("SELECT COUNT(*), SUM(total_stops) FROM routes WHERE technician_name LIKE ? OR technician_id = ?", (f"%{td['name'].split()[0]}%", td["id"]))
+        cursor.execute("SELECT COUNT(*), SUM(total_stops) FROM routes WHERE (technician_name LIKE ? OR technician_id = ?) AND tenant_id = ?", (f"%{td['name'].split()[0]}%", td["id"], tenant_id))
         rc = cursor.fetchone()
         td["assigned_routes_count"] = rc[0] if rc else 0
         td["active_stops_count"] = rc[1] if rc and rc[1] else 0
@@ -830,21 +713,26 @@ def get_all_technicians() -> List[Dict[str, Any]]:
     conn.close()
     return technicians
 
-def get_technician_by_id(tech_id: str) -> Optional[Dict[str, Any]]:
+def get_technician_by_id(tech_id: str, tenant_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM technicians WHERE id = ?", (tech_id,))
+    if tenant_id:
+        cursor.execute("SELECT * FROM technicians WHERE id = ? AND tenant_id = ?", (tech_id, tenant_id))
+    else:
+        cursor.execute("SELECT * FROM technicians WHERE id = ?", (tech_id,))
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
 
-def save_technician(tech_data: Dict[str, Any]) -> Dict[str, Any]:
+def save_technician(tech_data: Dict[str, Any], tenant_id: str = DEFAULT_TENANT_ID) -> Dict[str, Any]:
     conn = get_connection()
     cursor = conn.cursor()
     tech_id = tech_data.get("id") or f"tech-{datetime.now().strftime('%M%S')}"
+    tech_tenant = tech_data.get("tenant_id") or tenant_id
+    
     cursor.execute("""
-    INSERT OR REPLACE INTO technicians (id, name, phone, email, avatar_url, role, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO technicians (id, name, phone, email, avatar_url, role, tenant_id, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         tech_id,
         tech_data.get("name"),
@@ -852,21 +740,23 @@ def save_technician(tech_data: Dict[str, Any]) -> Dict[str, Any]:
         tech_data.get("email"),
         tech_data.get("avatar_url", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"),
         tech_data.get("role", "Técnico de Rotas"),
+        tech_tenant,
         tech_data.get("created_at") or datetime.now().isoformat()
     ))
     conn.commit()
     conn.close()
     tech_data["id"] = tech_id
+    tech_data["tenant_id"] = tech_tenant
     return tech_data
 
-def update_technician_in_db(tech_id: str, tech_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    existing = get_technician_by_id(tech_id)
+def update_technician_in_db(tech_id: str, tech_data: Dict[str, Any], tenant_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Anti-IDOR: Valida a posse do técnico antes de atualizar."""
+    existing = get_technician_by_id(tech_id, tenant_id=tenant_id)
     if not existing:
         return None
-    merged = {**existing, **tech_data, "id": tech_id}
-    saved = save_technician(merged)
+    merged = {**existing, **tech_data, "id": tech_id, "tenant_id": existing.get("tenant_id", DEFAULT_TENANT_ID)}
+    saved = save_technician(merged, tenant_id=merged["tenant_id"])
     
-    # Atualiza também nas rotas associadas ao técnico
     conn = get_connection()
     cursor = conn.cursor()
     new_name = merged.get("name")
@@ -875,36 +765,43 @@ def update_technician_in_db(tech_id: str, tech_data: Dict[str, Any]) -> Optional
     cursor.execute("""
     UPDATE routes
     SET technician_name = ?, technician_phone = ?
-    WHERE technician_id = ? OR technician_name LIKE ?
-    """, (new_name, new_phone, tech_id, f"%{old_first_name}%"))
+    WHERE (technician_id = ? OR technician_name LIKE ?) AND tenant_id = ?
+    """, (new_name, new_phone, tech_id, f"%{old_first_name}%", merged["tenant_id"]))
     conn.commit()
     conn.close()
     return saved
 
-def delete_technician_from_db(tech_id: str) -> bool:
+def delete_technician_from_db(tech_id: str, tenant_id: Optional[str] = None) -> bool:
+    """Anti-IDOR: Valida a posse do técnico antes de deletar."""
     conn = get_connection()
     cursor = conn.cursor()
-    existing = get_technician_by_id(tech_id)
-    if existing:
-        name = existing.get("name", "")
-        old_first_name = name.split()[0] if name else ""
-        cursor.execute("DELETE FROM routes WHERE technician_id = ? OR technician_name = ? OR technician_name LIKE ?", (tech_id, name, f"%{old_first_name}%"))
-    cursor.execute("DELETE FROM technicians WHERE id = ?", (tech_id,))
+    existing = get_technician_by_id(tech_id, tenant_id=tenant_id)
+    if not existing:
+        conn.close()
+        return False
+
+    name = existing.get("name", "")
+    old_first_name = name.split()[0] if name else ""
+    t_id = existing.get("tenant_id", DEFAULT_TENANT_ID)
+    
+    cursor.execute("DELETE FROM routes WHERE (technician_id = ? OR technician_name = ? OR technician_name LIKE ?) AND tenant_id = ?", (tech_id, name, f"%{old_first_name}%", t_id))
+    cursor.execute("DELETE FROM technicians WHERE id = ? AND tenant_id = ?", (tech_id, t_id))
     deleted = cursor.rowcount > 0
     conn.commit()
     conn.close()
     return deleted
 
-def create_or_update_route(route_data: Dict[str, Any]) -> Dict[str, Any]:
+def create_or_update_route(route_data: Dict[str, Any], tenant_id: str = DEFAULT_TENANT_ID) -> Dict[str, Any]:
     conn = get_connection()
     cursor = conn.cursor()
     route_id = route_data.get("id") or f"route-{datetime.now().strftime('%M%S')}"
+    route_tenant = route_data.get("tenant_id") or tenant_id
     
     cursor.execute("""
     INSERT OR REPLACE INTO routes (
         id, technician_id, technician_name, technician_phone, day_of_week, date,
-        total_stops, completed_stops, total_distance_km, estimated_travel_time_min, status, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        total_stops, completed_stops, total_distance_km, estimated_travel_time_min, status, tenant_id, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         route_id,
         route_data.get("technician_id"),
@@ -917,21 +814,22 @@ def create_or_update_route(route_data: Dict[str, Any]) -> Dict[str, Any]:
         route_data.get("total_distance_km", 0.0),
         route_data.get("estimated_travel_time_min", 0),
         route_data.get("status", "Planejada"),
+        route_tenant,
         route_data.get("created_at") or datetime.now().isoformat()
     ))
     conn.commit()
     conn.close()
-    return get_route_by_id(route_id) or route_data
+    return get_route_by_id(route_id, tenant_id=route_tenant) or route_data
 
-def add_stop_to_route(route_id: str, pool_id: str, scheduled_time: str = "10:00") -> Optional[Dict[str, Any]]:
-    pool = get_pool_by_id(pool_id)
+def add_stop_to_route(route_id: str, pool_id: str, scheduled_time: str = "10:00", tenant_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    pool = get_pool_by_id(pool_id, tenant_id=tenant_id)
     if not pool:
         return None
     
     conn = get_connection()
     cursor = conn.cursor()
+    t_id = pool.get("tenant_id", DEFAULT_TENANT_ID)
     
-    # Próximo order_index
     cursor.execute("SELECT MAX(order_index) FROM route_stops WHERE route_id = ?", (route_id,))
     max_order = cursor.fetchone()[0] or 0
     new_order = max_order + 1
@@ -940,15 +838,14 @@ def add_stop_to_route(route_id: str, pool_id: str, scheduled_time: str = "10:00"
     cursor.execute("""
     INSERT INTO route_stops (
         stop_id, route_id, pool_id, pool_name, customer_name, customer_phone, address,
-        latitude, longitude, order_index, scheduled_time, estimated_duration_min, status, photos_json
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendente', '[]')
+        latitude, longitude, order_index, scheduled_time, estimated_duration_min, status, photos_json, tenant_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendente', '[]', ?)
     """, (
         stop_id, route_id, pool["id"], pool["name"], pool["customer_name"], pool.get("customer_phone"),
         pool["address"], pool.get("latitude", 32.7767), pool.get("longitude", -96.7970),
-        new_order, scheduled_time, 45
+        new_order, scheduled_time, 45, t_id
     ))
     
-    # Atualiza total de paradas na rota
     cursor.execute("""
     UPDATE routes SET total_stops = (
         SELECT COUNT(*) FROM route_stops WHERE route_id = ?
@@ -957,14 +854,17 @@ def add_stop_to_route(route_id: str, pool_id: str, scheduled_time: str = "10:00"
     
     conn.commit()
     conn.close()
-    return optimize_route_path(route_id)
+    return optimize_route_path(route_id, tenant_id=t_id)
 
-def remove_stop_from_route(stop_id: str) -> bool:
+def remove_stop_from_route(stop_id: str, tenant_id: Optional[str] = None) -> bool:
+    """Anti-IDOR: Valida a posse da parada antes de remover."""
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Pega route_id antes de deletar
-    cursor.execute("SELECT route_id FROM route_stops WHERE stop_id = ?", (stop_id,))
+    if tenant_id:
+        cursor.execute("SELECT route_id, tenant_id FROM route_stops WHERE stop_id = ? AND tenant_id = ?", (stop_id, tenant_id))
+    else:
+        cursor.execute("SELECT route_id, tenant_id FROM route_stops WHERE stop_id = ?", (stop_id,))
     row = cursor.fetchone()
     if not row:
         conn.close()
@@ -973,7 +873,6 @@ def remove_stop_from_route(stop_id: str) -> bool:
     route_id = row[0]
     cursor.execute("DELETE FROM route_stops WHERE stop_id = ?", (stop_id,))
     
-    # Atualiza total de paradas na rota
     cursor.execute("""
     UPDATE routes SET total_stops = (
         SELECT COUNT(*) FROM route_stops WHERE route_id = ?
@@ -985,11 +884,15 @@ def remove_stop_from_route(stop_id: str) -> bool:
     optimize_route_path(route_id)
     return True
 
-def reassign_stop_to_route(stop_id: str, target_route_id: str) -> bool:
+def reassign_stop_to_route(stop_id: str, target_route_id: str, tenant_id: Optional[str] = None) -> bool:
+    """Anti-IDOR: Valida que a parada e a rota de destino pertençam ao mesmo tenant."""
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT route_id FROM route_stops WHERE stop_id = ?", (stop_id,))
+    if tenant_id:
+        cursor.execute("SELECT route_id, tenant_id FROM route_stops WHERE stop_id = ? AND tenant_id = ?", (stop_id, tenant_id))
+    else:
+        cursor.execute("SELECT route_id, tenant_id FROM route_stops WHERE stop_id = ?", (stop_id,))
     row = cursor.fetchone()
     if not row:
         conn.close()
@@ -997,10 +900,14 @@ def reassign_stop_to_route(stop_id: str, target_route_id: str) -> bool:
     
     old_route_id = row[0]
     
-    # Atualiza route_id da parada
+    # Valida rota de destino
+    if tenant_id:
+        cursor.execute("SELECT id FROM routes WHERE id = ? AND tenant_id = ?", (target_route_id, tenant_id))
+        if not cursor.fetchone():
+            conn.close()
+            return False
+
     cursor.execute("UPDATE route_stops SET route_id = ?, status = 'Pendente' WHERE stop_id = ?", (target_route_id, stop_id))
-    
-    # Atualiza contagem de paradas de ambas as rotas
     cursor.execute("UPDATE routes SET total_stops = (SELECT COUNT(*) FROM route_stops WHERE route_id = ?) WHERE id = ?", (old_route_id, old_route_id))
     cursor.execute("UPDATE routes SET total_stops = (SELECT COUNT(*) FROM route_stops WHERE route_id = ?) WHERE id = ?", (target_route_id, target_route_id))
     
@@ -1010,6 +917,3 @@ def reassign_stop_to_route(stop_id: str, target_route_id: str) -> bool:
     optimize_route_path(old_route_id)
     optimize_route_path(target_route_id)
     return True
-
-
-

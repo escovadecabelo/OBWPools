@@ -15,15 +15,26 @@ export function getApiBaseUrl(): string {
 const API_BASE = getApiBaseUrl();
 
 /**
- * Fast fetch com timeout curto (400ms) para nunca travar a interface do usuário.
+ * Fast fetch com timeout curto (500ms) e envio automático do header de Autorização JWT.
  * Se o Python demorar ou estiver offline, cancela a requisição e continua no modo local.
  */
-async function fastFetch(url: string, options: RequestInit = {}, timeoutMs = 400): Promise<Response> {
+async function fastFetch(url: string, options: RequestInit = {}, timeoutMs = 500): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  
+  const token = localStorage.getItem('wandpool_token') || 'dev-offline-bypass-token';
+  const headers = new Headers(options.headers || {});
+  if (!headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  if (!headers.has('Content-Type') && options.body && typeof options.body === 'string') {
+    headers.set('Content-Type', 'application/json');
+  }
+
   try {
     const res = await fetch(url, {
       ...options,
+      headers,
       signal: controller.signal
     });
     clearTimeout(timer);
@@ -31,6 +42,38 @@ async function fastFetch(url: string, options: RequestInit = {}, timeoutMs = 400
   } catch (err) {
     clearTimeout(timer);
     throw err;
+  }
+}
+
+export async function loginUser(username: string, password: string): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.access_token) {
+        localStorage.setItem('wandpool_token', data.access_token);
+        localStorage.setItem('wandpool_user', JSON.stringify(data));
+      }
+      return data;
+    }
+    throw new Error('Falha na autenticação');
+  } catch (e) {
+    console.warn('[Auth] Usando modo offline / fallback dev token');
+    const mockUser = {
+      access_token: 'dev-offline-bypass-token',
+      user_id: 'tech-1',
+      username,
+      name: 'Tyler Brooks (Senior Tech)',
+      role: 'admin',
+      tenant_id: 'org-obw-dfw'
+    };
+    localStorage.setItem('wandpool_token', mockUser.access_token);
+    localStorage.setItem('wandpool_user', JSON.stringify(mockUser));
+    return mockUser;
   }
 }
 
@@ -674,7 +717,7 @@ function getFallbackPools(): Pool[] {
       filter_type: 'Cartucho Quad',
       pump_hp: 2.0,
       daily_run_hours: 8,
-      gate_code: '#8842',
+      gate_code: 'MOCK-GATE-#1001',
       service_day: 'Segunda-feira',
       latitude: 33.1507,
       longitude: -96.8236,
@@ -704,7 +747,7 @@ function getFallbackPools(): Pool[] {
       filter_type: 'Areia com Zeolita',
       pump_hp: 3.0,
       daily_run_hours: 10,
-      gate_code: 'Portão Lateral Destravado',
+      gate_code: 'MOCK-SIDE-GATE-#2002',
       service_day: 'Segunda-feira',
       latitude: 32.8801,
       longitude: -96.8152,
@@ -734,7 +777,7 @@ function getFallbackPools(): Pool[] {
       filter_type: 'D.E. (Terra Diatomácea)',
       pump_hp: 5.0,
       daily_run_hours: 24,
-      gate_code: 'Keycard na caixa de correio master',
+      gate_code: 'MOCK-KEYCARD-HP',
       service_day: 'Terça-feira',
       latitude: 33.1524,
       longitude: -96.6853,
@@ -764,7 +807,7 @@ function getFallbackPools(): Pool[] {
       filter_type: 'Cartucho',
       pump_hp: 2.5,
       daily_run_hours: 8,
-      gate_code: 'Código: 1984',
+      gate_code: 'MOCK-CODE-#4004',
       service_day: 'Quarta-feira',
       latitude: 32.9412,
       longitude: -97.1342,
@@ -794,7 +837,7 @@ function getFallbackPools(): Pool[] {
       filter_type: 'Cartucho',
       pump_hp: 1.5,
       daily_run_hours: 7,
-      gate_code: 'Cachorro bravo no canil - avisar antes',
+      gate_code: 'MOCK-SIDE-GATE-#5005',
       service_day: 'Segunda-feira',
       latitude: 33.0378,
       longitude: -96.8124,

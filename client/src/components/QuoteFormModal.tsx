@@ -3,6 +3,7 @@ import { X, Send, CheckCircle2, Phone, Mail, Sparkles, MessageSquare } from 'luc
 import confetti from 'canvas-confetti';
 import { canSubmitLead } from '../lib/leadGuard';
 import { HoneypotField, TurnstileWidget } from './TurnstileWidget';
+import { safeOpenUrl, sanitizeWhatsAppUrl } from '../lib/security';
 
 interface QuoteFormModalProps {
   isOpen: boolean;
@@ -58,7 +59,7 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
       return;
     }
     setGuardError('');
-    const text = encodeURIComponent(
+    const rawMsg = 
       `Hello OBW Pools! I'd like to request a quote and schedule an inspection.\n\n` +
       `👤 *Name:* ${name}\n` +
       `📞 *Phone:* ${phone}\n` +
@@ -66,9 +67,9 @@ export const QuoteFormModal: React.FC<QuoteFormModalProps> = ({
       `📍 *City (DFW):* ${city}, TX\n` +
       `🏊 *Pool Type:* ${poolType}\n` +
       `📋 *Plan Selected:* ${selectedPlan}\n` +
-      `📝 *Notes:* ${notes || 'Requesting initial pool inspection.'}`
-    );
-    window.open(`https://wa.me/17542351214?text=${text}`, '_blank');
+      `📝 *Notes:* ${notes || 'Requesting initial pool inspection.'}`;
+    const url = sanitizeWhatsAppUrl('17542351214', rawMsg);
+    safeOpenUrl(url, '_blank');
   };
 
   return (

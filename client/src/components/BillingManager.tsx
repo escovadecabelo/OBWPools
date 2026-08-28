@@ -4,6 +4,7 @@ import {
   Receipt, DollarSign, CheckCircle2, Clock, 
   Share2
 } from 'lucide-react';
+import { safeOpenUrl, sanitizeWhatsAppUrl } from '../lib/security';
 
 const STORAGE_KEY = 'wandpool_invoices';
 
@@ -139,9 +140,8 @@ export const BillingManager: React.FC = () => {
       `💳 *Formas de Pagamento:* Zelle, Cartão de Crédito ou Cheque\n\n` +
       `Obrigado por manter sua piscina cristalina com a WandPool!`;
 
-    const phone = inv.customer_phone ? inv.customer_phone.replace(/\D/g, '') : '';
-    const url = `https://api.whatsapp.com/send?phone=${phone ? `1${phone}` : ''}&text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
+    const url = sanitizeWhatsAppUrl(inv.customer_phone || '', msg);
+    safeOpenUrl(url, '_blank');
   };
 
   const totalMonthlyBilled = invoices.reduce((acc, i) => acc + i.total_usd, 0);

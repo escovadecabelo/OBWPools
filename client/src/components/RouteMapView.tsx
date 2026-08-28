@@ -3,6 +3,7 @@ import type { Route, RouteStop } from '../types/pool';
 import { 
   Navigation, ExternalLink, Sparkles, Compass
 } from 'lucide-react';
+import { safeOpenUrl } from '../lib/security';
 
 interface RouteMapViewProps {
   route: Route;
@@ -43,12 +44,12 @@ export const RouteMapView: React.FC<RouteMapViewProps> = ({
 
   const handleOpenGoogleMaps = (stop: RouteStop) => {
     const url = `https://www.google.com/maps/dir/?api=1&destination=${stop.latitude},${stop.longitude}`;
-    window.open(url, '_blank');
+    safeOpenUrl(url, '_blank');
   };
 
   const handleOpenWaze = (stop: RouteStop) => {
     const url = `https://waze.com/ul?ll=${stop.latitude},${stop.longitude}&navigate=yes`;
-    window.open(url, '_blank');
+    safeOpenUrl(url, '_blank');
   };
 
   return (

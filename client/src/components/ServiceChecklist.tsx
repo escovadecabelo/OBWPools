@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Pool, ChecklistItem, ChemicalDoseItem, ServiceVisit } from '../types/pool';
 import { ClipboardCheck, CheckSquare, Square, FileText, Send, Printer, Check } from 'lucide-react';
 import { recordServiceVisit } from '../lib/api';
+import { safeOpenUrl, sanitizeWhatsAppUrl } from '../lib/security';
 import confetti from 'canvas-confetti';
 
 interface ServiceChecklistProps {
@@ -120,7 +121,8 @@ export const ServiceChecklist: React.FC<ServiceChecklistProps> = ({
       `\n\n💬 *Mensagem do Técnico:* ${customerMessage}\n\n` +
       `WandPool Service • Relatório Digital`;
 
-    window.open(`https://api.whatsapp.com/send?phone=${pool.customer_phone?.replace(/\D/g, '') || ''}&text=${encodeURIComponent(text)}`, '_blank');
+    const url = sanitizeWhatsAppUrl(pool.customer_phone || '', text);
+    safeOpenUrl(url, '_blank');
   };
 
   return (

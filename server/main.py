@@ -1,20 +1,25 @@
 """
 WandPool FastAPI Backend Server
 Administração de rotas, otimização inteligente de trajetos, envio automático de fotos e cálculo químico.
+Segurança Reforçada: Autenticação JWT, RBAC, Isolamento de Tenant e Proteção Anti-IDOR.
 """
 
-from fastapi import FastAPI, HTTPException, status
-from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Dict, Any, Optional
+import os
 import uuid
 import json
+import logging
 from datetime import datetime
 from contextlib import asynccontextmanager
+from typing import List, Dict, Any, Optional
+
+from fastapi import FastAPI, HTTPException, status, Depends
+from fastapi.middleware.cors import CORSMiddleware
 
 from server.models import (
     Pool, WaterTest, ServiceVisit, VolumeCalcRequest,
     DosageCalcRequest, LSICalcRequest, ChatMessage,
-    Route, RouteStop, RouteOptimizeRequest, ServicePhoto
+    Route, RouteStop, RouteOptimizeRequest, ServicePhoto,
+    LoginRequest, LoginResponse, LeadVerifyRequest, LeadVerifyResponse
 )
 from server.chemistry import (
     calculate_lsi, calculate_chemical_dosages, calculate_pool_volume
@@ -30,25 +35,47 @@ from server.db import (
 from server.hermes_pool_tools import (
     HERMES_POOL_TOOL_DEFINITIONS, handle_hermes_tool_call
 )
+from server.auth import (
+    get_current_user, require_admin, authenticate_user, create_jwt_token, DEFAULT_TENANT_ID
+)
+from server.lead_verification import verify_turnstile_token
+
+# Configuração de Log
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("obwpools.security")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Startup validation
+    jwt_secret = os.getenv("JWT_SECRET")
+    if not jwt_secret:
+        logger.warning("[SEGURANÇA] JWT_SECRET não configurado via ENV. Usando segredo de desenvolvimento padrão.")
+    else:
+        logger.info("[SEGURANÇA] JWT_SECRET validado e carregado do ambiente com sucesso.")
+        
     init_db()
+    logger.info("[BANCO] Banco de dados SQLite inicializado com suporte a Multi-tenant Scoping.")
     yield
 
 app = FastAPI(
-    title="WandPool API - Route & Pool Management",
-    description="Administração de Rotas, Gestão de Técnicos, Otimização de Trajetos e Envio Automático de Fotos",
-    version="1.0.0",
+    title="WandPool API - Secure Route & Pool Management",
+    description="Administração Segura de Rotas, Gestão de Técnicos com RBAC, Otimização GPS e Química",
+    version="1.1.0",
     lifespan=lifespan
 )
 
-# CORS Middleware
+# CORS Seguro com Lista de Origens Permitidas
+ALLOWED_ORIGINS_RAW = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,http://localhost:8000,http://127.0.0.1:5173,http://127.0.0.1:8000,http://10.0.2.2:8000,capacitor://localhost,https://obwpools.pages.dev,https://obwpools.com"
+)
+ALLOWED_ORIGINS = [orig.strip() for orig in ALLOWED_ORIGINS_RAW.split(",") if orig.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -60,39 +87,91 @@ def read_root():
     return {
         "app": "OBW Pools API",
         "status": "online",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "language": "pt-BR",
+        "security": "JWT/Bearer Auth & Tenant-Scoped Isolation Enabled",
         "primary_focus": "Administração de Rotas por Funcionário, Otimização GPS & Envio de Fotos"
     }
 
 # ==========================================
-# ROTAS DE TÉCNICOS / FUNCIONÁRIOS
+# ROTAS DE AUTENTICAÇÃO E LEAD VERIFICATION
+# ==========================================
+
+@app.post("/api/auth/login", response_model=LoginResponse)
+def login_for_access_token(credentials: LoginRequest):
+    """Autentica usuário e retorna token JWT com papel e tenant."""
+    user = authenticate_user(credentials.username, credentials.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciais inválidas. Verifique seu e-mail e senha.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+    
+    token = create_jwt_token({
+        "user_id": user["user_id"],
+        "username": user["username"],
+        "name": user["name"],
+        "role": user["role"],
+        "tenant_id": user["tenant_id"]
+    })
+    
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user_id": user["user_id"],
+        "username": user["username"],
+        "name": user["name"],
+        "role": user["role"],
+        "tenant_id": user["tenant_id"]
+    }
+
+@app.get("/api/auth/me")
+def get_my_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Retorna dados da sessão do usuário autenticado."""
+    return current_user
+
+@app.post("/api/leads/verify", response_model=LeadVerifyResponse)
+def verify_lead_submission(req: LeadVerifyRequest):
+    """Validação server-side de token anti-bot Cloudflare Turnstile."""
+    if req.honeypot and req.honeypot.strip() != "":
+        return {"success": False, "message": "Submissão rejeitada por filtro anti-spam."}
+    
+    res = verify_turnstile_token(req.token)
+    return {
+        "success": res.get("success", False),
+        "message": res.get("message", "Validação concluída")
+    }
+
+# ==========================================
+# ROTAS DE TÉCNICOS / FUNCIONÁRIOS (RBAC)
 # ==========================================
 
 @app.get("/api/technicians", response_model=List[Dict[str, Any]])
-def list_technicians():
-    """Retorna todos os técnicos e funcionários cadastrados."""
-    return get_all_technicians()
+def list_technicians(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Retorna todos os técnicos cadastrados no tenant do usuário autenticado."""
+    return get_all_technicians(tenant_id=current_user["tenant_id"])
 
 @app.post("/api/technicians")
-def create_technician(payload: Dict[str, Any]):
-    """Cadastra um novo técnico/funcionário."""
-    return save_technician(payload)
+def create_technician(payload: Dict[str, Any], current_user: Dict[str, Any] = Depends(require_admin)):
+    """Cadastra um novo técnico/funcionário (Requer papel de Administrador)."""
+    payload["tenant_id"] = current_user["tenant_id"]
+    return save_technician(payload, tenant_id=current_user["tenant_id"])
 
 @app.put("/api/technicians/{tech_id}")
-def update_technician(tech_id: str, payload: Dict[str, Any]):
-    """Atualiza dados do técnico/funcionário."""
-    tech = update_technician_in_db(tech_id, payload)
+def update_technician(tech_id: str, payload: Dict[str, Any], current_user: Dict[str, Any] = Depends(require_admin)):
+    """Atualiza dados do técnico/funcionário com validação Anti-IDOR."""
+    tech = update_technician_in_db(tech_id, payload, tenant_id=current_user["tenant_id"])
     if not tech:
-        raise HTTPException(status_code=404, detail="Técnico não encontrado.")
+        raise HTTPException(status_code=404, detail="Técnico não encontrado ou não pertence à sua organização.")
     return {"message": "Técnico atualizado com sucesso!", "technician": tech}
 
 @app.delete("/api/technicians/{tech_id}")
-def delete_technician(tech_id: str):
-    """Remove um técnico do sistema."""
-    success = delete_technician_from_db(tech_id)
+def delete_technician(tech_id: str, current_user: Dict[str, Any] = Depends(require_admin)):
+    """Remove um técnico do sistema com validação Anti-IDOR (Requer papel de Administrador)."""
+    success = delete_technician_from_db(tech_id, tenant_id=current_user["tenant_id"])
     if not success:
-        raise HTTPException(status_code=404, detail="Técnico não encontrado.")
+        raise HTTPException(status_code=404, detail="Técnico não encontrado ou não pertence à sua organização.")
     return {"message": "Técnico removido com sucesso!"}
 
 # ==========================================
@@ -100,72 +179,75 @@ def delete_technician(tech_id: str):
 # ==========================================
 
 @app.get("/api/routes", response_model=List[Dict[str, Any]])
-def list_routes():
-    """Retorna todas as rotas ativas de atendimento."""
-    return get_routes()
+def list_routes(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Retorna todas as rotas ativas do tenant autenticado."""
+    return get_routes(tenant_id=current_user["tenant_id"])
 
 @app.get("/api/routes/{route_id}", response_model=Dict[str, Any])
-def get_route(route_id: str):
-    """Retorna detalhes completos de uma rota e suas paradas."""
-    route = get_route_by_id(route_id)
+def get_route(route_id: str, current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Retorna detalhes de uma rota com isolamento de tenant."""
+    route = get_route_by_id(route_id, tenant_id=current_user["tenant_id"])
     if not route:
-        raise HTTPException(status_code=404, detail="Rota não encontrada.")
+        raise HTTPException(status_code=404, detail="Rota não encontrada ou não pertence à sua organização.")
     return route
 
 @app.post("/api/routes")
-def create_route(payload: Dict[str, Any]):
-    """Cria uma nova rota para um funcionário."""
-    route = create_or_update_route(payload)
+def create_route(payload: Dict[str, Any], current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Cria uma nova rota vinculada ao tenant autenticado."""
+    payload["tenant_id"] = current_user["tenant_id"]
+    route = create_or_update_route(payload, tenant_id=current_user["tenant_id"])
     return {"message": "Rota criada com sucesso!", "route": route}
 
 @app.put("/api/routes/{route_id}")
-def update_route(route_id: str, payload: Dict[str, Any]):
-    """Atualiza dados de uma rota (técnico responsável, dia, status)."""
+def update_route(route_id: str, payload: Dict[str, Any], current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Atualiza dados de uma rota com validação Anti-IDOR."""
+    existing = get_route_by_id(route_id, tenant_id=current_user["tenant_id"])
+    if not existing:
+        raise HTTPException(status_code=404, detail="Rota não encontrada ou não pertence à sua organização.")
     payload["id"] = route_id
-    route = create_or_update_route(payload)
+    payload["tenant_id"] = current_user["tenant_id"]
+    route = create_or_update_route(payload, tenant_id=current_user["tenant_id"])
     return {"message": "Rota atualizada com sucesso!", "route": route}
 
 @app.post("/api/routes/{route_id}/stops")
-def add_stop(route_id: str, payload: Dict[str, Any]):
-    """Adiciona uma piscina/cliente à rota de um funcionário."""
+def add_stop(route_id: str, payload: Dict[str, Any], current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Adiciona uma piscina/cliente à rota com validação Anti-IDOR."""
     pool_id = payload.get("pool_id")
     sched_time = payload.get("scheduled_time", "10:00")
     if not pool_id:
         raise HTTPException(status_code=400, detail="pool_id é obrigatório.")
-    route = add_stop_to_route(route_id, pool_id, sched_time)
+    route = add_stop_to_route(route_id, pool_id, sched_time, tenant_id=current_user["tenant_id"])
     if not route:
-        raise HTTPException(status_code=404, detail="Piscina ou rota não encontrada.")
+        raise HTTPException(status_code=404, detail="Piscina ou rota não encontrada na sua organização.")
     return {"message": "Parada adicionada à rota e trajeto reotimizado!", "route": route}
 
 @app.delete("/api/routes/stops/{stop_id}")
-def delete_stop(stop_id: str):
-    """Remove uma parada da rota."""
-    success = remove_stop_from_route(stop_id)
+def delete_stop(stop_id: str, current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Remove uma parada da rota com validação Anti-IDOR."""
+    success = remove_stop_from_route(stop_id, tenant_id=current_user["tenant_id"])
     if not success:
-        raise HTTPException(status_code=404, detail="Parada não encontrada.")
+        raise HTTPException(status_code=404, detail="Parada não encontrada na sua organização.")
     return {"message": "Parada removida com sucesso!"}
 
 @app.post("/api/routes/stops/{stop_id}/reassign")
-def reassign_stop(stop_id: str, payload: Dict[str, Any]):
-    """Transfere uma parada da rota de um funcionário para a rota de outro funcionário."""
+def reassign_stop(stop_id: str, payload: Dict[str, Any], current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Transfere uma parada entre rotas do mesmo tenant (Anti-IDOR)."""
     target_route_id = payload.get("target_route_id")
     if not target_route_id:
         raise HTTPException(status_code=400, detail="target_route_id é obrigatório.")
-    success = reassign_stop_to_route(stop_id, target_route_id)
+    success = reassign_stop_to_route(stop_id, target_route_id, tenant_id=current_user["tenant_id"])
     if not success:
-        raise HTTPException(status_code=400, detail="Erro ao transferir parada.")
+        raise HTTPException(status_code=400, detail="Erro ao transferir parada. Verifique permissões das rotas.")
     return {"message": "Parada transferida com sucesso para o novo funcionário!"}
 
 @app.post("/api/routes/optimize")
-def optimize_route(req: RouteOptimizeRequest):
-    """
-    Otimiza a sequência de paradas da rota usando o algoritmo de menor caminho (TSP/Haversine),
-    reduzindo tempo de deslocamento e gasto de combustível.
-    """
+def optimize_route(req: RouteOptimizeRequest, current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Otimiza a sequência de paradas da rota (TSP/Haversine) com isolamento de tenant."""
     result = optimize_route_path(
         route_id=req.route_id,
         start_lat=req.start_latitude or 32.7767,
-        start_lng=req.start_longitude or -96.7970
+        start_lng=req.start_longitude or -96.7970,
+        tenant_id=current_user["tenant_id"]
     )
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
@@ -175,28 +257,23 @@ def optimize_route(req: RouteOptimizeRequest):
     }
 
 @app.post("/api/routes/stops/{stop_id}/update")
-def update_stop(stop_id: str, payload: Dict[str, Any]):
-    """Atualiza o status da parada e fotos anexadas (Antes / Depois / Equipamento)."""
+def update_stop(stop_id: str, payload: Dict[str, Any], current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Atualiza o status da parada e fotos com validação Anti-IDOR."""
     new_status = payload.get("status", "Concluído")
     photos = payload.get("photos", [])
-    success = update_stop_photos_and_status(stop_id, new_status, photos)
+    success = update_stop_photos_and_status(stop_id, new_status, photos, tenant_id=current_user["tenant_id"])
     if not success:
-        raise HTTPException(status_code=400, detail="Erro ao atualizar parada.")
+        raise HTTPException(status_code=400, detail="Erro ao atualizar parada. Recurso inexistente ou não autorizado.")
     return {"message": "Parada atualizada e fotos sincronizadas com sucesso!"}
 
 @app.post("/api/routes/stops/{stop_id}/dispatch")
-def auto_dispatch_service_report(stop_id: str, payload: Dict[str, Any]):
-    """
-    Disparo Automático do Comprovante de Serviço (Digital Door Hanger)
-    com fotos de Antes e Depois para WhatsApp e E-mail do cliente.
-    """
+def auto_dispatch_service_report(stop_id: str, payload: Dict[str, Any], current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Disparo Automático do Comprovante de Serviço com autorização verificada."""
     customer_phone = payload.get("customer_phone", "")
     customer_name = payload.get("customer_name", "Cliente")
     pool_name = payload.get("pool_name", "Piscina")
     photos = payload.get("photos", [])
-    technician_notes = payload.get("notes", "Manutenção concluída.")
     
-    # Simulação de disparo de mensagem WhatsApp / Webhook
     dispatch_payload = {
         "dispatch_id": f"disp-{uuid.uuid4().hex[:8]}",
         "timestamp": datetime.now().isoformat(),
@@ -206,7 +283,7 @@ def auto_dispatch_service_report(stop_id: str, payload: Dict[str, Any]):
         "total_photos_attached": len(photos),
         "status": "Disparado com Sucesso",
         "channels": ["WhatsApp Business API", "E-mail Digital Door Hanger"],
-        "message_preview": f"Olá {customer_name}! Sua piscina ({pool_name}) foi atendida com sucesso. {len(photos)} fotos de comprovação de serviço foram anexadas. Status da água: Cristalina e liberada para banho."
+        "message_preview": f"Olá {customer_name}! Sua piscina ({pool_name}) foi atendida com sucesso. {len(photos)} fotos anexadas."
     }
 
     return {
@@ -215,47 +292,61 @@ def auto_dispatch_service_report(stop_id: str, payload: Dict[str, Any]):
     }
 
 # ==========================================
-# ROTAS DE PISCINAS (CRUD)
+# ROTAS DE PISCINAS (CRUD COM TENANT SCOPING)
 # ==========================================
 
 @app.get("/api/pools", response_model=List[Dict[str, Any]])
-def list_pools():
-    return get_all_pools()
+def list_pools(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Lista piscinas com isolamento de tenant e mascaramento de códigos de portão."""
+    # Oculta gate_code em listagens gerais
+    return get_all_pools(tenant_id=current_user["tenant_id"], mask_gate_code=True)
 
 @app.get("/api/pools/{pool_id}", response_model=Dict[str, Any])
-def get_pool(pool_id: str):
-    pool = get_pool_by_id(pool_id)
+def get_pool(pool_id: str, current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Retorna detalhes da piscina incluindo gate_code apenas para usuário autenticado."""
+    pool = get_pool_by_id(pool_id, tenant_id=current_user["tenant_id"])
     if not pool:
-        raise HTTPException(status_code=404, detail="Piscina não encontrada.")
+        raise HTTPException(status_code=404, detail="Piscina não encontrada na sua organização.")
     return pool
 
 @app.post("/api/pools", status_code=status.HTTP_201_CREATED)
-def create_pool(pool: Pool):
+def create_pool(pool: Pool, current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Cadastra piscina associada ao tenant autenticado."""
     pool_data = pool.dict()
     if not pool_data.get("id"):
         pool_data["id"] = f"pool-{uuid.uuid4().hex[:8]}"
-    saved = save_pool_in_db(pool_data)
+    pool_data["tenant_id"] = current_user["tenant_id"]
+    saved = save_pool_in_db(pool_data, tenant_id=current_user["tenant_id"])
     return {"message": "Piscina cadastrada com sucesso!", "pool": saved}
 
 @app.put("/api/pools/{pool_id}")
-def update_pool(pool_id: str, pool: Pool):
+def update_pool(pool_id: str, pool: Pool, current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Atualiza dados da piscina com validação Anti-IDOR."""
     pool_data = pool.dict()
-    updated = update_pool_in_db(pool_id, pool_data)
+    updated = update_pool_in_db(pool_id, pool_data, tenant_id=current_user["tenant_id"])
     if not updated:
-        raise HTTPException(status_code=404, detail="Piscina não encontrada.")
+        raise HTTPException(status_code=404, detail="Piscina não encontrada ou não pertence à sua organização.")
     return {"message": "Piscina/Cliente atualizado com sucesso!", "pool": updated}
-
 
 # ==========================================
 # ROTAS DE TESTES QUÍMICOS E VISITAS
 # ==========================================
 
 @app.get("/api/pools/{pool_id}/tests")
-def list_pool_tests(pool_id: str):
-    return get_pool_tests(pool_id)
+def list_pool_tests(pool_id: str, current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Lista testes químicos da piscina com validação de tenant."""
+    pool = get_pool_by_id(pool_id, tenant_id=current_user["tenant_id"])
+    if not pool:
+        raise HTTPException(status_code=404, detail="Piscina não encontrada na sua organização.")
+    return get_pool_tests(pool_id, tenant_id=current_user["tenant_id"])
 
 @app.post("/api/pools/{pool_id}/tests", status_code=status.HTTP_201_CREATED)
-def create_pool_test(pool_id: str, test: WaterTest):
+def create_pool_test(pool_id: str, test: WaterTest, current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Registra teste químico com isolamento de tenant."""
+    pool = get_pool_by_id(pool_id, tenant_id=current_user["tenant_id"])
+    if not pool:
+        raise HTTPException(status_code=404, detail="Piscina não encontrada na sua organização.")
+
     lsi_result = calculate_lsi(
         ph=test.ph,
         temperature_c=test.temperature_c,
@@ -269,14 +360,15 @@ def create_pool_test(pool_id: str, test: WaterTest):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-    INSERT INTO water_tests (id, pool_id, timestamp, ph, free_chlorine, combined_chlorine, total_alkalinity, calcium_hardness, cyanuric_acid, salt_ppm, temperature_c, turbidity, lsi_score, lsi_status, technician_notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO water_tests (id, pool_id, timestamp, ph, free_chlorine, combined_chlorine, total_alkalinity, calcium_hardness, cyanuric_acid, salt_ppm, temperature_c, turbidity, lsi_score, lsi_status, technician_notes, tenant_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         test_id, pool_id, test.timestamp or datetime.now().isoformat(),
         test.ph, test.free_chlorine, test.combined_chlorine,
         test.total_alkalinity, test.calcium_hardness, test.cyanuric_acid,
         test.salt_ppm, test.temperature_c, test.turbidity,
-        lsi_result["lsi"], lsi_result["status"], test.technician_notes
+        lsi_result["lsi"], lsi_result["status"], test.technician_notes,
+        current_user["tenant_id"]
     ))
     conn.commit()
     conn.close()
@@ -284,11 +376,20 @@ def create_pool_test(pool_id: str, test: WaterTest):
     return {"message": "Teste registrado com sucesso!", "test_id": test_id, "lsi_analysis": lsi_result}
 
 @app.get("/api/pools/{pool_id}/visits")
-def list_pool_visits(pool_id: str):
-    return get_pool_visits(pool_id)
+def list_pool_visits(pool_id: str, current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Lista visitas técnicas da piscina com isolamento de tenant."""
+    pool = get_pool_by_id(pool_id, tenant_id=current_user["tenant_id"])
+    if not pool:
+        raise HTTPException(status_code=404, detail="Piscina não encontrada na sua organização.")
+    return get_pool_visits(pool_id, tenant_id=current_user["tenant_id"])
 
 @app.post("/api/pools/{pool_id}/visits", status_code=status.HTTP_201_CREATED)
-def record_service_visit(pool_id: str, visit: ServiceVisit):
+def record_service_visit(pool_id: str, visit: ServiceVisit, current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Registra visita técnica com fotos e checklist com validação de tenant."""
+    pool = get_pool_by_id(pool_id, tenant_id=current_user["tenant_id"])
+    if not pool:
+        raise HTTPException(status_code=404, detail="Piscina não encontrada na sua organização.")
+
     visit_id = visit.id or f"visit-{uuid.uuid4().hex[:8]}"
     checklist_json = json.dumps([item.dict() for item in visit.checklist_completed])
     chems_json = json.dumps([chem.dict() for chem in visit.chemicals_added])
@@ -296,10 +397,10 @@ def record_service_visit(pool_id: str, visit: ServiceVisit):
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE pools SET current_filter_psi = ? WHERE id = ?", (visit.filter_pressure_psi, pool_id))
+    cursor.execute("UPDATE pools SET current_filter_psi = ? WHERE id = ? AND tenant_id = ?", (visit.filter_pressure_psi, pool_id, current_user["tenant_id"]))
     cursor.execute("""
-    INSERT INTO service_visits (id, pool_id, visit_date, technician_name, filter_pressure_psi, backwash_performed, water_test_id, checklist_json, chemicals_json, photos_json, technician_notes, customer_summary, status, door_hanger_sent, whatsapp_dispatched)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO service_visits (id, pool_id, visit_date, technician_name, filter_pressure_psi, backwash_performed, water_test_id, checklist_json, chemicals_json, photos_json, technician_notes, customer_summary, status, door_hanger_sent, whatsapp_dispatched, tenant_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         visit_id, pool_id, visit.visit_date or datetime.now().isoformat(),
         visit.technician_name, visit.filter_pressure_psi,
@@ -308,7 +409,8 @@ def record_service_visit(pool_id: str, visit: ServiceVisit):
         checklist_json, chems_json, photos_json,
         visit.technician_notes, visit.customer_summary,
         visit.status, 1 if visit.door_hanger_sent else 0,
-        1 if visit.whatsapp_dispatched else 0
+        1 if visit.whatsapp_dispatched else 0,
+        current_user["tenant_id"]
     ))
     conn.commit()
     conn.close()
@@ -401,13 +503,13 @@ def agent_chat(message: ChatMessage):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-    INSERT INTO chat_history (pool_id, role, content, timestamp)
-    VALUES (?, ?, ?, ?)
-    """, (message.pool_id, "user", message.content, datetime.now().isoformat()))
+    INSERT INTO chat_history (pool_id, role, content, tenant_id, timestamp)
+    VALUES (?, ?, ?, ?, ?)
+    """, (message.pool_id, "user", message.content, DEFAULT_TENANT_ID, datetime.now().isoformat()))
     cursor.execute("""
-    INSERT INTO chat_history (pool_id, role, content, timestamp)
-    VALUES (?, ?, ?, ?)
-    """, (message.pool_id, "assistant", reply, datetime.now().isoformat()))
+    INSERT INTO chat_history (pool_id, role, content, tenant_id, timestamp)
+    VALUES (?, ?, ?, ?, ?)
+    """, (message.pool_id, "assistant", reply, DEFAULT_TENANT_ID, datetime.now().isoformat()))
     conn.commit()
     conn.close()
 

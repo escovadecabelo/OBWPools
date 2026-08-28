@@ -13,6 +13,7 @@ import {
   Navigation, MapPin, Sparkles, 
   Camera, RefreshCw, User, Users, Edit3, Plus, Clock, UserCheck, Trash2
 } from 'lucide-react';
+import { safeOpenUrl } from '../lib/security';
 import confetti from 'canvas-confetti';
 
 interface RouteManagerProps {
@@ -759,7 +760,7 @@ export const RouteManager: React.FC<RouteManagerProps> = ({ onSelectPoolForLab }
                     className="btn-secondary"
                     onClick={() => {
                       const url = `https://www.google.com/maps/dir/?api=1&destination=${stop.latitude},${stop.longitude}`;
-                      window.open(url, '_blank');
+                      safeOpenUrl(url, '_blank');
                     }}
                     style={{ padding: '6px 12px', fontSize: '0.8rem' }}
                     title="Abrir GPS no Google Maps / Waze"

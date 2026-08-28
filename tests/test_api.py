@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from server.main import app
 
 client = TestClient(app)
+AUTH_HEADERS = {"Authorization": "Bearer dev-offline-bypass-token"}
 
 def test_api_root():
     response = client.get("/")
@@ -12,14 +13,14 @@ def test_api_root():
     assert data["language"] == "pt-BR"
 
 def test_api_list_pools():
-    response = client.get("/api/pools")
+    response = client.get("/api/pools", headers=AUTH_HEADERS)
     assert response.status_code == 200
     pools = response.json()
     assert isinstance(pools, list)
     assert len(pools) >= 1
 
 def test_api_list_routes():
-    response = client.get("/api/routes")
+    response = client.get("/api/routes", headers=AUTH_HEADERS)
     assert response.status_code == 200
     routes = response.json()
     assert isinstance(routes, list)
@@ -28,14 +29,14 @@ def test_api_list_routes():
     assert len(routes[0]["stops"]) >= 2
 
 def test_api_optimize_route():
-    routes_res = client.get("/api/routes")
+    routes_res = client.get("/api/routes", headers=AUTH_HEADERS)
     route_id = routes_res.json()[0]["id"]
     
     response = client.post("/api/routes/optimize", json={
         "route_id": route_id,
         "start_latitude": -23.5505,
         "start_longitude": -46.6333
-    })
+    }, headers=AUTH_HEADERS)
     assert response.status_code == 200
     data = response.json()
     assert "route" in data
@@ -43,7 +44,7 @@ def test_api_optimize_route():
     assert data["route"]["stops"][0]["order_index"] == 1
 
 def test_api_update_stop_and_dispatch():
-    routes_res = client.get("/api/routes")
+    routes_res = client.get("/api/routes", headers=AUTH_HEADERS)
     stop = routes_res.json()[0]["stops"][0]
     stop_id = stop["stop_id"]
 
@@ -59,7 +60,7 @@ def test_api_update_stop_and_dispatch():
                 "timestamp": "2026-08-27T10:00:00"
             }
         ]
-    })
+    }, headers=AUTH_HEADERS)
     assert update_res.status_code == 200
 
     # Auto dispatch report to customer
@@ -69,7 +70,7 @@ def test_api_update_stop_and_dispatch():
         "pool_name": stop["pool_name"],
         "photos": [{"id": "test-p1", "url": "https://example.com/before.jpg"}],
         "notes": "Serviço concluído com sucesso."
-    })
+    }, headers=AUTH_HEADERS)
     assert dispatch_res.status_code == 200
     dispatch_data = dispatch_res.json()
     assert "dispatch" in dispatch_data

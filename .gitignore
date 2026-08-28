@@ -18,6 +18,7 @@ server/__pycache__/
 env/
 venv/
 .venv/
+docs/security-audit/.venv/
 
 # Database & local state
 *.db
@@ -32,10 +33,13 @@ server/*.db
 Thumbs.db
 *.log
 
-# Environment variables
+# Environment variables & secrets
 .env
 .env.local
 .env.*.local
+*.pem
+*.key
+*.cert
 
 # Agent scratch & logs
 .gemini/

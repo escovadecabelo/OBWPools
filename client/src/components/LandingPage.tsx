@@ -11,6 +11,7 @@ import { canSubmitLead } from '../lib/leadGuard';
 import { HoneypotField, TurnstileWidget } from './TurnstileWidget';
 import { LandingHeader } from './LandingHeader';
 import { LandingEnrichment } from './LandingEnrichment';
+import { safeOpenUrl, sanitizeWhatsAppUrl } from '../lib/security';
 
 export const LandingPage: React.FC = () => {
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
@@ -37,13 +38,13 @@ export const LandingPage: React.FC = () => {
       return;
     }
     setHeroGuardError('');
-    const text = encodeURIComponent(
+    const rawMsg = 
       `Hello OBW Pools! I'd like to request a free pool inspection.\n\n` +
       `👤 Name: ${heroName}\n` +
       `📞 Phone: ${heroPhone}\n` +
-      `📍 City: ${heroCity}, TX`
-    );
-    window.open(`https://wa.me/17542351214?text=${text}`, '_blank');
+      `📍 City: ${heroCity}, TX`;
+    const url = sanitizeWhatsAppUrl('17542351214', rawMsg);
+    safeOpenUrl(url, '_blank');
   };
 
   return (

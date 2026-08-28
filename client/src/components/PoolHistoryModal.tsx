@@ -6,6 +6,7 @@ import {
   FileText, Camera, Send, 
   ChevronDown, ChevronUp, RefreshCw
 } from 'lucide-react';
+import { safeOpenUrl, sanitizeWhatsAppUrl } from '../lib/security';
 
 interface PoolHistoryModalProps {
   pool: Pool | null;
@@ -60,13 +61,8 @@ export const PoolHistoryModal: React.FC<PoolHistoryModalProps> = ({
       `💬 *Resumo:* ${visit.customer_summary || 'Piscina balanceada e cristalina!'}\n` +
       `✨ *WandPool - Água Cristalina & Tecnologia em DFW*`;
 
-    const encoded = encodeURIComponent(text);
-    const cleanPhone = (pool.customer_phone || '').replace(/\D/g, '');
-    const url = cleanPhone.length >= 10 
-      ? `https://api.whatsapp.com/send?phone=1${cleanPhone}&text=${encoded}`
-      : `https://api.whatsapp.com/send?text=${encoded}`;
-    
-    window.open(url, '_blank');
+    const url = sanitizeWhatsAppUrl(pool.customer_phone || '', text);
+    safeOpenUrl(url, '_blank');
     setShareSuccess(`Comprovante de ${new Date(visit.visit_date).toLocaleDateString('pt-BR')} gerado para WhatsApp!`);
     setTimeout(() => setShareSuccess(null), 3000);
   };

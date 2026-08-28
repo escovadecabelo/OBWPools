@@ -4,6 +4,7 @@ import {
   Search, Plus, Edit3, MapPin, Phone, Key, X, User, ExternalLink, 
   FlaskConical, ArrowRight, FileText
 } from 'lucide-react';
+import { safeOpenUrl, sanitizeWhatsAppUrl, sanitizeMapsUrl } from '../lib/security';
 
 interface CustomerManagerProps {
   pools: Pool[];
@@ -49,15 +50,15 @@ export const CustomerManager: React.FC<CustomerManagerProps> = ({
   }, [pools, searchTerm, selectedFilter]);
 
   const handleOpenGps = (address: string) => {
-    const encoded = encodeURIComponent(address);
-    window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, '_blank');
+    const url = sanitizeMapsUrl(address);
+    safeOpenUrl(url, '_blank');
   };
 
   const handleOpenWhatsApp = (phone?: string, customerName?: string) => {
     if (!phone) return;
-    const cleanNumber = phone.replace(/\D/g, '');
-    const msg = encodeURIComponent(`Olá ${customerName}! Aqui é o Tyler da equipe técnica de manutenção WandPool.`);
-    window.open(`https://wa.me/1${cleanNumber}?text=${msg}`, '_blank');
+    const msg = `Olá ${customerName || ''}! Aqui é o Tyler da equipe técnica de manutenção WandPool.`;
+    const url = sanitizeWhatsAppUrl(phone, msg);
+    safeOpenUrl(url, '_blank');
   };
 
   return (

@@ -5,6 +5,7 @@ import {
   Wrench, Plus, CheckCircle2, DollarSign, 
   Share2, X
 } from 'lucide-react';
+import { safeOpenUrl, sanitizeWhatsAppUrl } from '../lib/security';
 
 const STORAGE_KEY = 'wandpool_work_orders';
 
@@ -157,9 +158,8 @@ export const WorkOrderManager: React.FC = () => {
       `💰 *Total:* *$${wo.total_cost_usd.toFixed(2)} USD*\n\n` +
       `Para aprovar este orçamento, responda esta mensagem!`;
 
-    const phone = wo.customer_phone ? wo.customer_phone.replace(/\D/g, '') : '';
-    const url = `https://api.whatsapp.com/send?phone=${phone ? `1${phone}` : ''}&text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
+    const url = sanitizeWhatsAppUrl(wo.customer_phone || '', msg);
+    safeOpenUrl(url, '_blank');
   };
 
   const filteredOrders = workOrders.filter(wo => {

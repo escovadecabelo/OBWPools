@@ -7,6 +7,27 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user_id: str
+    username: str
+    name: str
+    role: str
+    tenant_id: str
+
+class LeadVerifyRequest(BaseModel):
+    token: str
+    honeypot: Optional[str] = ""
+
+class LeadVerifyResponse(BaseModel):
+    success: bool
+    message: str
+
 class PoolTargetParams(BaseModel):
     target_ph: float = 7.4
     target_fc: float = 3.0
@@ -45,10 +66,12 @@ class Pool(BaseModel):
     service_day: str = "Segunda-feira" # Dia da semana da rota
     service_frequency: str = "Semanal" # Semanal, Quinzenal, 2x por semana
     target_params: PoolTargetParams = Field(default_factory=PoolTargetParams)
+    tenant_id: Optional[str] = "org-obw-dfw"
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
 class RouteStop(BaseModel):
     stop_id: str
+    route_id: str
     pool_id: str
     pool_name: str
     customer_name: str
@@ -77,6 +100,19 @@ class Route(BaseModel):
     estimated_travel_time_min: int = 0
     stops: List[RouteStop] = []
     status: str = "Em Andamento" # "Planejada", "Em Andamento", "Finalizada"
+    tenant_id: Optional[str] = "org-obw-dfw"
+
+class Technician(BaseModel):
+    id: str
+    name: str
+    phone: str
+    email: Optional[str] = None
+    avatar_url: Optional[str] = None
+    role: str = "Técnico de Rotas"
+    tenant_id: Optional[str] = "org-obw-dfw"
+    assigned_routes_count: Optional[int] = 0
+    active_stops_count: Optional[int] = 0
+    created_at: Optional[str] = None
 
 class WaterTest(BaseModel):
     id: Optional[str] = None
@@ -94,6 +130,7 @@ class WaterTest(BaseModel):
     lsi_score: Optional[float] = None
     lsi_status: Optional[str] = None
     technician_notes: Optional[str] = None
+    tenant_id: Optional[str] = "org-obw-dfw"
 
 class ChemicalDoseItem(BaseModel):
     chemical_name: str
@@ -123,6 +160,7 @@ class ServiceVisit(BaseModel):
     status: str = "Concluído"
     door_hanger_sent: bool = True
     whatsapp_dispatched: bool = True
+    tenant_id: Optional[str] = "org-obw-dfw"
 
 class RouteOptimizeRequest(BaseModel):
     route_id: str
