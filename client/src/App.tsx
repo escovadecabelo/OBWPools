@@ -16,7 +16,6 @@ import { EquipmentManager } from './components/EquipmentManager';
 import { ServiceChecklist } from './components/ServiceChecklist';
 import { NewPoolModal } from './components/NewPoolModal';
 import { PoolHistoryModal } from './components/PoolHistoryModal';
-import { WeatherAlertsBanner } from './components/WeatherAlertsBanner';
 import { TruckInventory } from './components/TruckInventory';
 import { WorkOrderManager } from './components/WorkOrderManager';
 import { BillingManager } from './components/BillingManager';
@@ -183,8 +182,6 @@ export function App() {
       {/* Main Content View */}
       <main style={{ maxWidth: 1400, width: '100%', margin: '0 auto', padding: '16px 16px 40px', flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
         
-        {/* Texas / DFW Weather & Freeze Alerts Banner */}
-        <WeatherAlertsBanner onNavigateToTab={setActiveTab} />
 
         {activeTab === 'home' && (
           <WelcomeScreen
